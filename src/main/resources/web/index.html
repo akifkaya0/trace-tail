@@ -1,5 +1,5 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>Canlı Log Görünümü</title>
+<!doctype html><html lang="en"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Trace Tail</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -24,9 +24,6 @@
   --err: #bd3a2c;
   --err-bg: #fdf0ee;
   --debug: #6b60b2;
-  --app-gw: #5a4ec3;
-  --app-or: #0a7864;
-  --app-sh: #9d3b84;
   --app-c: var(--muted);
   --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-log: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -39,10 +36,6 @@
 body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--font-ui); -webkit-font-smoothing: antialiased; }
 button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-[data-app="gateway"] { --app-c: var(--app-gw); }
-[data-app="orders"] { --app-c: var(--app-or); }
-[data-app="shipping"] { --app-c: var(--app-sh); }
 
 .wrap { max-width: 1600px; margin: 0 auto; padding-inline: 16px; }
 
@@ -96,6 +89,7 @@ h1 { margin: 0; font: 600 20px/1.1 var(--font-display); letter-spacing: 0.005em;
 .fold.closed svg { transform: rotate(-90deg); }
 .sp { flex: none; width: 16px; }
 .ev { font-weight: 600; }
+.tx { color: var(--ink); }
 .ph { font-weight: 600; }
 .ph.start { color: var(--accent); }
 .ph.end { color: var(--muted); }
@@ -304,7 +298,7 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
   .w-ap, .w-tick.odd { display: none; }
 }
 
-/* raw mode: exactly what the pods write to stdout, one JSON object per line */
+/* raw mode: exactly what the apps send, one JSON object per line */
 .raw { margin-block: 8px 96px; padding: 10px 12px; background: var(--raw-bg); border: 1px solid var(--line); border-radius: 6px; font: 12px/1.6 var(--font-log); color: var(--ink); }
 .raw > div { white-space: pre-wrap; overflow-wrap: anywhere; padding-block: 1px; border-bottom: 1px solid var(--line); }
 .raw > div:last-child { border-bottom: 0; }
@@ -312,29 +306,27 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
 .raw-note code { font: 500 12px var(--font-log); color: var(--accent); }
 </style>
 <style id="hlStyle"></style>
+<style id="appStyle"></style>
 
 <header class="bar">
   <div class="wrap">
     <div class="bar-row">
-      <h1>Canlı Log Görünümü</h1>
-      <span class="live" id="live">canlı</span>
-      <div class="seg" role="group" aria-label="Görünüm" id="modeSeg">
-        <button type="button" data-mode="tree" aria-pressed="true">Ağaç</button>
-        <button type="button" data-mode="flat" aria-pressed="false">Düz</button>
-        <button type="button" data-mode="flow" aria-pressed="false">Akış</button>
-        <button type="button" data-mode="seq" aria-pressed="false">Sıra diyagramı</button>
-        <button type="button" data-mode="wf" aria-pressed="false">Şelale</button>
-        <button type="button" data-mode="raw" aria-pressed="false">Ham</button>
+      <h1>Live logs</h1>
+      <span class="live" id="live">live</span>
+      <div class="seg" role="group" aria-label="View" id="modeSeg">
+        <button type="button" data-mode="tree" aria-pressed="true">Tree</button>
+        <button type="button" data-mode="flat" aria-pressed="false">Flat</button>
+        <button type="button" data-mode="flow" aria-pressed="false">Flow</button>
+        <button type="button" data-mode="seq" aria-pressed="false">Sequence</button>
+        <button type="button" data-mode="wf" aria-pressed="false">Waterfall</button>
+        <button type="button" data-mode="raw" aria-pressed="false">Raw</button>
       </div>
       <div class="lvl-ctl">
-        <label for="lvlApp">Log seviyesi</label>
+        <label for="lvlApp">Level</label>
         <select id="lvlApp">
-          <option value="all">Tüm uygulamalar</option>
-          <option value="gateway">gateway</option>
-          <option value="orders">orders</option>
-          <option value="shipping">shipping</option>
+          <option value="all">All apps</option>
         </select>
-        <div class="seg" role="group" aria-label="Log seviyesi" id="lvlSeg">
+        <div class="seg" role="group" aria-label="Level" id="lvlSeg">
           <button type="button" data-level="DEBUG" aria-pressed="false">DEBUG</button>
           <button type="button" data-level="INFO" aria-pressed="true">INFO</button>
           <button type="button" data-level="WARN" aria-pressed="false">WARN</button>
@@ -342,21 +334,21 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
         </div>
       </div>
       <span class="grow"></span>
-      <button id="openBtn" class="btn" type="button">Hepsini aç</button>
+      <button id="openBtn" class="btn" type="button">Expand all</button>
       <button id="playBtn" class="btn" type="button"></button>
     </div>
-    <div class="cols" id="cols" aria-hidden="true"><span>Zaman</span><span>Seviye</span><span class="c-app">Uygulama</span><span>Mesaj</span></div>
+    <div class="cols" id="cols" aria-hidden="true"><span>Time</span><span>Level</span><span class="c-app">App</span><span>Message</span></div>
   </div>
 </header>
 
 <main class="wrap">
-  <div id="viewTree" class="log" aria-label="Ağaç görünümü"></div>
-  <div id="viewFlat" class="log flat" aria-label="Düz görünüm" hidden></div>
+  <div id="viewTree" class="log" aria-label="Tree view"></div>
+  <div id="viewFlat" class="log flat" aria-label="Flat view" hidden></div>
   <div id="viewFlowWrap" hidden>
-    <div id="viewFlow" class="flow" aria-label="Akış görünümü"></div>
+    <div id="viewFlow" class="flow" aria-label="Flow view"></div>
   </div>
-  <div id="viewSeqWrap" class="seqs" aria-label="Sıra diyagramları" hidden></div>
-  <div id="viewWfWrap" class="wfs" aria-label="Şelale görünümü" hidden></div>
+  <div id="viewSeqWrap" class="seqs" aria-label="Sequence diagrams" hidden></div>
+  <div id="viewWfWrap" class="wfs" aria-label="Waterfall view" hidden></div>
   <svg class="sq-defs" width="0" height="0" aria-hidden="true" focusable="false">
     <defs>
       <marker id="sqh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="sq-headf"/></marker>
@@ -365,10 +357,10 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     </defs>
   </svg>
   <div id="viewRaw" hidden>
-    <div id="rawLog" class="raw" aria-label="Ham log satırları"></div>
+    <div id="rawLog" class="raw" aria-label="Raw log lines"></div>
   </div>
 </main>
-<button id="followBtn" class="follow" type="button" hidden>Yeni satırlara in</button>
+<button id="followBtn" class="follow" type="button" hidden>Jump to new lines</button>
 
 <script>
 (() => {
@@ -378,376 +370,86 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
   const flowEl = $('viewFlow'), flowWrap = $('viewFlowWrap'), seqWrap = $('viewSeqWrap'), wfWrap = $('viewWfWrap');
   const treeEl = $('viewTree'), flatEl = $('viewFlat'), rawWrap = $('viewRaw'), rawEl = $('rawLog');
   const playBtn = $('playBtn'), openBtn = $('openBtn'), liveEl = $('live'), followBtn = $('followBtn'), hlStyle = $('hlStyle'), colsEl = $('cols');
+  const appStyle = $('appStyle'), lvlApp = $('lvlApp'), lvlSeg = $('lvlSeg');
   const CHEV = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const PAUSE = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="2.5" y="2" width="2.6" height="8" rx="0.6" fill="currentColor"/><rect x="6.9" y="2" width="2.6" height="8" rx="0.6" fill="currentColor"/></svg>';
   const PLAY = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 2.3v7.4a.5.5 0 0 0 .76.43l6-3.7a.5.5 0 0 0 0-.86l-6-3.7a.5.5 0 0 0-.76.43z" fill="currentColor"/></svg>';
 
   /* ---------- time and text ---------- */
-  const TZ = 3 * 3600e3;                        // Europe/Istanbul
-  const BASE = Date.UTC(2026, 9, 6, 7, 15, 0);  // 10:15:00.000 local
   const pad = (n, w = 2) => String(n).padStart(w, '0');
   const fmtLocal = ms => {
-    const d = new Date(Math.round(ms) + TZ);
-    return pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds()) + '.' + pad(d.getUTCMilliseconds(), 3);
+    const d = new Date(ms);
+    return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + '.' + pad(d.getMilliseconds(), 3);
   };
-  const fmtIso = ms => new Date(Math.round(ms)).toISOString();
   const fmtDur = ms => {
     if (ms == null || !isFinite(ms)) return '—';
     ms = Math.max(0, ms);
-    return ms < 1000 ? Math.round(ms) + ' ms' : (ms / 1000).toFixed(ms < 10000 ? 2 : 1).replace('.', ',') + ' s';
+    return ms < 1000 ? Math.round(ms) + ' ms' : (ms / 1000).toFixed(ms < 10000 ? 2 : 1) + ' s';
   };
+  const count = (n, one, many) => n + ' ' + (n === 1 ? one : many);
   const esc = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
-  /* ---------- deterministic randomness: every visit opens the same way ---------- */
-  let seed = 20261006;
-  const rnd = () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296;
-  const ri = (a, b) => a + Math.floor(rnd() * (b - a + 1));
-  const pick = a => a[Math.floor(rnd() * a.length)];
-  const hex = n => { let s = ''; for (let i = 0; i < n; i++) s += '0123456789abcdef'[Math.floor(rnd() * 16)]; return s; };
+  const state = { playing: true, openAll: false };
 
-  const state = { playing: true, openAll: false, simNow: BASE };
-
-  /* ---------- scenario builder: plays one request and records the lines the apps would write ---------- */
-  const PODS = {
-    gateway: ['gateway-5c8d9f7b4-qx2lm', 'gateway-5c8d9f7b4-7hvtr'],
-    orders: ['orders-6f9c7d8d5-k2x8p', 'orders-6f9c7d8d5-w4zjn'],
-    'shipping': ['shipping-7b6d5c9f8-m9pd2'],
-  };
-  const USERS = ['u-1007', 'u-1007', 'u-4410', 'u-0236', 'u-1192', 'u-7781'];
-  const STACK_DB = 'org.springframework.transaction.CannotCreateTransactionException: Could not open JPA EntityManager for transaction\n\tat o.s.orm.jpa.JpaTransactionManager.doBegin(JpaTransactionManager.java:466)\n\t... 87 more\nCaused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 3000ms.';
-  const CRASH = { crash: true };
-
-  class Run {
-    constructor(t0, user, flow) {
-      this.trace = hex(32);
-      this.t0 = t0;
-      this.t = 0;
-      this.user = user;
-      this.flow = flow;
-      this.lines = [];
-      this.pods = {};
+  /* ---------- a received line: one ECS JSON object, read into the fields the view works with ---------- */
+  // Fields the view shows in their own place. Every other field is listed as key=value.
+  const OWN_FIELDS = new Set([
+    '@timestamp', 'log.level', 'message', 'ecs.version', 'service.name', 'event.dataset', 'host.name',
+    'process.thread.name', 'log.logger', 'trace.id', 'span.id', 'parent.id', 'traceId', 'spanId',
+    'event.action', 'phase', 'flow', 'user.id',
+  ]);
+  // The view knows four levels. TRACE shows as DEBUG and FATAL as ERROR; the JSON keeps the original.
+  const LEVEL_OF = { TRACE: 'DEBUG', DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', FATAL: 'ERROR' };
+  const str = v => (v == null || v === '' ? null : String(v));
+  function readLine(text) {
+    let o;
+    try { o = JSON.parse(text); } catch (e) { return null; }
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
+    const fields = {};
+    for (const [k, v] of Object.entries(o)) {
+      if (!OWN_FIELDS.has(k) && v != null) fields[k] = typeof v === 'object' ? JSON.stringify(v) : v;
     }
-    pod(app) { return this.pods[app] || (this.pods[app] = pick(PODS[app])); }
-    wait(ms) { this.t += ms; }
-    emit(app, level, event, phase, span, parent, fields, message) {
-      this.lines.push({ ts: this.t0 + this.t, level, app, pod: this.pod(app), trace: this.trace, span, parent, event, phase, flow: this.flow, user: this.user, fields: fields || {}, message });
-    }
-    open(app, event, parent, fields, message, level) {
-      const s = { span: hex(16), app, event, start: this.t, parent: parent ? parent.span : null };
-      this.emit(app, level || 'INFO', event, 'START', s.span, s.parent, fields, message);
-      return s;
-    }
-    close(s, fields, message, level) {
-      const f = Object.assign({}, fields, { durationMs: this.t - s.start, startTime: fmtIso(this.t0 + s.start) });
-      this.emit(s.app, level || 'INFO', s.event, 'END', s.span, s.parent, f, message);
-    }
-    note(s, event, fields, message, level) {
-      this.emit(s.app, level || 'INFO', event, null, s.span, null, fields, message);
-    }
-    // The service aspect: every service method gets a START and an END line at DEBUG.
-    method(parent, name, args, body) {
-      const m = this.open(parent.app, 'METHOD', parent, { method: name, args }, 'Method started', 'DEBUG');
-      const r = body(m) || {};
-      this.wait(1);
-      if (r.exception) {
-        this.close(m, { method: name, outcome: r.outcome || 'FAILURE', exception: r.exception }, 'Method failed', 'DEBUG');
-      } else {
-        const f = { method: name, outcome: 'SUCCESS' };
-        if (r.result != null) f.result = r.result;
-        this.close(m, f, 'Method finished', 'DEBUG');
-      }
-      return r;
-    }
+    if (fields.durationMs != null && isFinite(fields.durationMs)) fields.durationMs = Number(fields.durationMs);
+    const ts = Date.parse(o['@timestamp']);
+    const phase = str(o.phase);
+    return {
+      ts: isFinite(ts) ? ts : Date.now(),
+      level: LEVEL_OF[String(o['log.level']).toUpperCase()] || 'INFO',
+      app: str(o['service.name']) || '?',
+      // Micrometer also puts the ids into the MDC under these names
+      trace: str(o['trace.id']) || str(o.traceId),
+      span: str(o['span.id']) || str(o.spanId),
+      parent: str(o['parent.id']),
+      event: str(o['event.action']),
+      phase: phase === 'START' || phase === 'END' ? phase : null,
+      user: str(o['user.id']),
+      message: str(o.message) || '',
+      fields,
+      json: o,
+      text,
+    };
   }
 
-  function scCheckout(t0, variant, user) {
-    const r = new Run(t0, user, 'CHECKOUT');
-    const route = '/checkout/submit';
-    const prov = 'Q-' + ri(100, 999);
-    const ref = 'CO' + ri(100000, 999999);
-    const fixed = 129.9 + ri(0, 200) / 10000;
-    const fx = fixed.toFixed(4);
-    const amount = pick(['5000.00', '10000.00', '25000.00', '50000.00']);
-    const mwIn = r.open('gateway', 'HTTP_IN', null, { route }, 'Request received');
-    r.wait(ri(1, 3));
-    const mwOut = r.open('gateway', 'HTTP_OUT', mwIn, { target: 'orders', op: 'submitCheckout' }, 'Calling orders');
-    r.wait(ri(2, 4));
-    const beIn = r.open('orders', 'HTTP_IN', mwOut, { route, quoteId: prov }, 'Request received');
-    r.wait(1);
-    let outcome = 'SUCCESS', status = 200, reason = null;
-    try {
-      r.method(beIn, 'CheckoutService.submitCheckout', '{quoteId:' + prov + ', amount:' + amount + '}', m => {
-        r.wait(1);
-        r.method(m, 'QuoteService.getQuote', '{quoteId:' + prov + '}', () => {
-          r.wait(ri(2, 4));
-          return { result: '{quotedPrice:' + fx + ', validForSec:10}' };
-        });
-        r.wait(1);
-        const reject = variant === 'reject';
-        const cur = (fixed + (reject ? ri(150, 300) : ri(2, 14)) / 10000).toFixed(4);
-        r.method(m, 'PriceCheckService.checkDrift', '{quotedPrice:' + fx + ', currentPrice:' + cur + '}', c => {
-          r.wait(ri(1, 2));
-          const f = { quoteId: prov, quotedPrice: fx, currentPrice: cur, maxDrift: '0.0005', result: reject ? 'REJECTED' : 'PASSED' };
-          if (reject) f.reason = 'PRICE_CHANGED';
-          r.note(c, 'PRICE_CHECKS', f, 'Price checks evaluated');
-          return reject ? { exception: 'PriceChangedException', outcome: 'REJECTED' } : { result: 'PASSED' };
-        });
-        if (reject) {
-          outcome = 'REJECTED'; status = 422; reason = 'PRICE_CHANGED';
-          return { exception: 'PriceChangedException', outcome: 'REJECTED' };
-        }
-        r.wait(1);
-        const payment = r.method(m, 'PaymentService.authorize', '{refNo:' + ref + ', amount:' + amount + '}', b => {
-          r.wait(1);
-          const out = r.open('orders', 'HTTP_OUT', b, { target: 'PSP', op: 'AUTHORIZE', refNo: ref }, 'Calling payment provider');
-          if (variant === 'crash') throw CRASH;   // the orders pod dies while waiting for the payment provider
-          if (variant === 'timeout') {
-            r.wait(10000);
-            r.close(out, { target: 'PSP', op: 'AUTHORIZE', outcome: 'TIMEOUT' }, 'Payment call timed out', 'WARN');
-            return { exception: 'SocketTimeoutException' };
-          }
-          r.wait(ri(110, 240));
-          r.close(out, { target: 'PSP', op: 'AUTHORIZE', status: 200, outcome: 'SUCCESS' }, 'Payment call completed');
-          return { result: '{pspRef:PSP-' + ri(10000, 99999) + ', status:APPROVED}' };
-        });
-        if (payment.exception) {
-          r.wait(2);
-          r.note(m, 'CHECKOUT_FAILED', { refNo: ref, quoteId: prov, reason: 'PSP_TIMEOUT' }, 'Checkout outcome unknown after payment timeout', 'ERROR');
-          outcome = 'FAILURE'; status = 504; reason = 'PSP_TIMEOUT';
-          return { exception: 'PaymentTimeoutException' };
-        }
-        r.wait(ri(5, 12));
-        r.note(m, 'CHECKOUT_COMPLETED', { refNo: ref, quoteId: prov }, 'Checkout completed');
-        return { result: '{refNo:' + ref + ', status:COMPLETED}' };
-      });
-    } catch (e) {
-      if (e !== CRASH) throw e;
-      r.wait(ri(4, 9));
-      r.close(mwOut, { target: 'orders', op: 'submitCheckout', outcome: 'FAILURE', error: 'Connection reset by peer' }, 'Orders call failed', 'WARN');
-      r.wait(1);
-      r.close(mwIn, { route, status: 502, outcome: 'FAILURE', downstream: 'orders' }, 'Request failed', 'WARN');
-      return r.lines;
-    }
-    const lvl = outcome === 'FAILURE' ? 'WARN' : 'INFO';
-    const msg = outcome === 'SUCCESS' ? 'Request completed' : outcome === 'REJECTED' ? 'Request rejected' : 'Request failed';
-    const inEnd = { route, status, outcome };
-    if (reason) inEnd.reason = reason;
-    r.wait(ri(2, 4));
-    r.close(beIn, inEnd, msg, lvl);
-    r.wait(ri(3, 6));
-    r.close(mwOut, { target: 'orders', op: 'submitCheckout', status, outcome }, outcome === 'FAILURE' ? 'Orders call failed' : 'Orders call completed', lvl);
-    r.wait(ri(1, 3));
-    r.close(mwIn, { route, status, outcome }, msg, lvl);
-    return r.lines;
-  }
-
-  function scOrder(t0, variant, user) {
-    const r = new Run(t0, user, 'ORDER');
-    const route = '/orders/create';
-    const sku = pick(['SKU-1042', 'SKU-2210', 'SKU-3307']);
-    const base = { 'SKU-1042': 19.9, 'SKU-2210': 49.5, 'SKU-3307': 129.9 }[sku];
-    const unitPrice = base.toFixed(2);
-    const orderId = 'ORD-' + ri(70000, 79999);
-    const qty = ri(1, 5);
-    const mwIn = r.open('gateway', 'HTTP_IN', null, { route }, 'Request received');
-    r.wait(ri(1, 3));
-    const mwOut = r.open('gateway', 'HTTP_OUT', mwIn, { target: 'orders', op: 'createOrder' }, 'Calling orders');
-    r.wait(ri(2, 4));
-    const beIn = r.open('orders', 'HTTP_IN', mwOut, { route }, 'Request received');
-    r.wait(1);
-    let mqOut = null, tPub = 0;
-    const res = r.method(beIn, 'OrderService.createOrder', '{sku:' + sku + ', quantity:' + qty + ', unitPrice:' + unitPrice + '}', m => {
-      r.wait(1);
-      r.method(m, 'InventoryService.checkStock', '{sku:' + sku + ', quantity:' + qty + '}', c => {
-        r.wait(ri(2, 5));
-        r.note(c, 'STOCK_CHECKS', { sku, available: ri(6, 40), requested: qty, result: 'PASSED' }, 'Stock checked');
-        return { result: 'PASSED' };
-      });
-      if (variant === 'dbfail') {
-        r.wait(ri(2990, 3020));
-        return { exception: 'CannotCreateTransactionException' };
-      }
-      r.wait(ri(8, 16));
-      r.note(m, 'ORDER_CREATED', { orderId, sku, quantity: qty, unitPrice }, 'Order created');
-      r.wait(1);
-      mqOut = r.open('orders', 'MQ_OUT', m, { queue: 'order.created', orderId }, 'Publishing message');
-      r.wait(ri(1, 3));
-      r.close(mqOut, { queue: 'order.created', outcome: 'SUCCESS' }, 'Message published');
-      tPub = r.t;
-      return { result: '{orderId:' + orderId + '}' };
-    });
-    if (res.exception) {
-      r.wait(2);
-      r.close(beIn, { route, status: 500, outcome: 'FAILURE', exception: res.exception, 'error.stack_trace': STACK_DB }, 'Request failed', 'ERROR');
-      r.wait(ri(3, 6));
-      r.close(mwOut, { target: 'orders', op: 'createOrder', status: 500, outcome: 'FAILURE' }, 'Orders call failed', 'WARN');
-      r.wait(1);
-      r.close(mwIn, { route, status: 500, outcome: 'FAILURE', downstream: 'orders' }, 'Request failed', 'WARN');
-      return r.lines;
-    }
-    r.wait(ri(2, 4));
-    r.close(beIn, { route, status: 201, outcome: 'SUCCESS', orderId }, 'Request completed');
-    r.wait(ri(3, 6));
-    r.close(mwOut, { target: 'orders', op: 'createOrder', status: 201, outcome: 'SUCCESS' }, 'Orders call completed');
-    r.wait(ri(1, 3));
-    r.close(mwIn, { route, status: 201, outcome: 'SUCCESS' }, 'Request completed');
-    // shipping consumes the message shortly after it was published
-    r.t = tPub + ri(4, 12);
-    const ao = r.open('shipping', 'MQ_IN', mqOut, { queue: 'order.created', orderId }, 'Message received');
-    r.wait(1);
-    r.method(ao, 'ShipmentService.createShipment', '{orderId:' + orderId + '}', m2 => {
-      r.wait(ri(2, 4));
-      r.note(m2, 'SHIPMENT_CREATED', { orderId, sku, service: pick(['ground', 'express']) }, 'Shipment created');
-      return { result: 'CREATED' };
-    });
-    r.wait(1);
-    r.close(ao, { queue: 'order.created', outcome: 'SUCCESS' }, 'Message processed');
-    return r.lines;
-  }
-
-  function scJob(t0) {
-    const r = new Run(t0, 'system', 'JOB');
-    const job = r.open('orders', 'JOB', null, { job: 'ReservationExpiryJob' }, 'Job started');
-    r.wait(1);
-    const n = ri(1, 3);
-    const ids = Array.from({ length: n }, () => 'ORD-' + ri(60000, 69999));
-    let mq = null, tPub = 0;
-    r.method(job, 'ReservationService.expireReservations', '{cutoff:' + fmtIso(t0) + '}', m => {
-      r.wait(ri(6, 12));
-      for (const id of ids) {
-        r.note(m, 'RESERVATION_EXPIRED', { orderId: id, reason: 'HOLD_ENDED' }, 'Reservation expired');
-        r.wait(ri(2, 4));
-      }
-      mq = r.open('orders', 'MQ_OUT', m, { queue: 'reservation.expired', count: n }, 'Publishing message');
-      r.wait(ri(1, 3));
-      r.close(mq, { queue: 'reservation.expired', outcome: 'SUCCESS' }, 'Message published');
-      tPub = r.t;
-      return { result: '{expired:' + n + '}' };
-    });
-    r.wait(1);
-    r.close(job, { job: 'ReservationExpiryJob', outcome: 'SUCCESS', expired: n }, 'Job finished');
-    r.t = tPub + ri(4, 10);
-    const ao = r.open('shipping', 'MQ_IN', mq, { queue: 'reservation.expired', count: n }, 'Message received');
-    r.method(ao, 'ShipmentService.cancelShipments', '{orderIds:[' + ids.join(', ') + ']}', m2 => {
-      for (const id of ids) {
-        r.wait(ri(1, 2));
-        r.note(m2, 'SHIPMENT_CANCELLED', { orderId: id }, 'Shipment cancelled');
-      }
-      return { result: '{stopped:' + n + '}' };
-    });
-    r.wait(1);
-    r.close(ao, { queue: 'reservation.expired', outcome: 'SUCCESS' }, 'Message processed');
-    return r.lines;
-  }
-
-  function scUnauthorized(t0) {
-    const route = pick(['/checkout/submit', '/orders/create', '/orders/cancel']);
-    const r = new Run(t0, null, route.startsWith('/checkout') ? 'CHECKOUT' : 'ORDER');
-    const mwIn = r.open('gateway', 'HTTP_IN', null, { route }, 'Request received');
-    r.wait(ri(1, 3));
-    r.close(mwIn, { route, status: 401, outcome: 'UNAUTHORIZED', reason: 'TOKEN_EXPIRED' }, 'Request rejected');
-    return r.lines;
-  }
-
-  const OPENING = [
-    t => scCheckout(t, 'ok', 'u-1007'),
-    t => scUnauthorized(t),
-    t => scCheckout(t, 'reject', 'u-4410'),
-    t => scOrder(t, 'ok', 'u-0236'),
-    t => scJob(t),
-    t => scCheckout(t, 'timeout', 'u-1192'),
-    t => scOrder(t, 'ok', 'u-1007'),
-    t => scCheckout(t, 'crash', 'u-7781'),
-    t => scCheckout(t, 'ok', 'u-4410'),
-    t => scOrder(t, 'dbfail', 'u-0236'),
-  ];
-  function randomScenario(t) {
-    const x = rnd(), u = pick(USERS);
-    if (x < 0.36) return scCheckout(t, 'ok', u);
-    if (x < 0.48) return scCheckout(t, 'reject', u);
-    if (x < 0.68) return scOrder(t, 'ok', u);
-    if (x < 0.73) return scOrder(t, 'dbfail', u);
-    if (x < 0.82) return scUnauthorized(t);
-    if (x < 0.92) return scJob(t);
-    if (x < 0.97) return scCheckout(t, 'timeout', u);
-    return scCheckout(t, 'crash', u);
-  }
-  let opening = 0;
-  const nextScenario = t => (opening < OPENING.length ? OPENING[opening++](t) : randomScenario(t));
-
-  /* ---------- engine: one simulated clock, lines released in timestamp order ---------- */
-  const queue = [];
-  function enqueue(lines) {
-    for (const l of lines) {
-      let lo = 0, hi = queue.length;
-      while (lo < hi) { const mid = (lo + hi) >> 1; if (queue[mid].ts <= l.ts) lo = mid + 1; else hi = mid; }
-      queue.splice(lo, 0, l);
-    }
-  }
-  let nextArrival = BASE;
-  function spawnDue() {
-    while (state.simNow >= nextArrival) {
-      enqueue(nextScenario(nextArrival));
-      nextArrival += ri(450, 1500);
-    }
-  }
-  function drain() {
-    while (queue.length && queue[0].ts <= state.simNow) ingest(queue.shift());
-  }
-
-  /* ---------- the log line as the pod writes it (EcsLayout) ---------- */
   const HIDDEN_FIELDS = new Set(['startTime', 'error.stack_trace']);
   const ID_KEYS = new Set(['trace.id', 'span.id', 'parent.id']);
-  const hueOf = id => parseInt(id.slice(0, 6), 16) % 8;
+  // the same trace keeps the same colour
+  const hueOf = id => {
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    return h % 8;
+  };
   const outCls = o => (o === 'SUCCESS' ? 'v-ok' : o === 'REJECTED' ? 'v-warn' : o === 'UNAUTHORIZED' ? 'v-mute' : 'v-err');
   const VALUE_CLS = {
     outcome: outCls,
     result: v => (v === 'PASSED' ? 'v-ok' : v === 'REJECTED' ? 'v-warn' : ''),
   };
-  const LOGGERS = {
-    METHOD: 'com.example.common.logging.ServiceLoggingAspect',
-    PRICE_CHECKS: 'com.example.orders.service.PriceCheckService',
-    CHECKOUT_COMPLETED: 'com.example.orders.service.CheckoutService',
-    CHECKOUT_FAILED: 'com.example.orders.service.CheckoutService',
-    STOCK_CHECKS: 'com.example.orders.service.InventoryService',
-    ORDER_CREATED: 'com.example.orders.service.OrderService',
-    RESERVATION_EXPIRED: 'com.example.orders.service.ReservationService',
-    SHIPMENT_CREATED: 'com.example.shipping.service.ShipmentService',
-    SHIPMENT_CANCELLED: 'com.example.shipping.service.ShipmentService',
-  };
-  const BOUNDARY_LOGGER = 'com.example.common.logging.BoundaryLogger';
-  const threads = new Map();   // the thread is fixed by how the request entered each app
-  function threadOf(l) {
-    const key = l.trace + '|' + l.app;
-    let t = threads.get(key);
-    if (!t) {
-      const n = (parseInt(l.trace.slice(6, 10), 16) % 24) + 1;
-      t = l.event === 'JOB' ? 'scheduling-1'
-        : l.event === 'MQ_IN' ? 'org.springframework.amqp.rabbit.RabbitListenerEndpointContainer#0-' + ((n % 4) + 1)
-        : 'http-nio-8080-exec-' + n;
-      threads.set(key, t);
-      if (threads.size > 4000) threads.delete(threads.keys().next().value);
-    }
-    return t;
-  }
-  function ecs(l) {
-    const o = {
-      '@timestamp': fmtIso(l.ts), 'log.level': l.level, message: l.message, 'ecs.version': '1.2.0',
-      'process.thread.name': threadOf(l), 'log.logger': LOGGERS[l.event] || BOUNDARY_LOGGER,
-      'service.name': l.app, 'host.name': l.pod, 'trace.id': l.trace, 'span.id': l.span,
-    };
-    if (l.phase) o['parent.id'] = l.parent;
-    o['event.name'] = l.event;
-    if (l.phase) o['event.phase'] = l.phase;
-    o.flow = l.flow;
-    if (l.user) o['user.id'] = l.user;
-    return Object.assign(o, l.fields);
-  }
+  // a line without an event name, such as a library's own log, shows its message instead
+  const evHTML = l => (l.event ? '<span class="ev">' + esc(l.event) + '</span>' : '<span class="tx">' + esc(l.message) + '</span>');
   function jsonHTML(l) {
-    return '{' + Object.entries(ecs(l)).map(([k, v]) => {
+    return '{' + Object.entries(l.json).map(([k, v]) => {
       const val = v === null ? '<span class="jn">null</span>'
-        : typeof v === 'number' ? '<span class="jnum">' + v + '</span>'
-        : '<span class="js">' + esc(JSON.stringify(String(v))) + '</span>';
+        : typeof v === 'number' || typeof v === 'boolean' ? '<span class="jnum">' + v + '</span>'
+        : '<span class="js">' + esc(JSON.stringify(typeof v === 'object' ? v : String(v))) + '</span>';
       const pair = '<span class="jk">' + esc(JSON.stringify(k)) + '</span>:' + val;
       return ID_KEYS.has(k) ? '<mark class="idp">' + pair + '</mark>' : pair;
     }).join(',') + '}';
@@ -761,11 +463,12 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
       }).join(' ');
   }
 
-  /* ---------- log level: decided by the app when it writes, so it only affects new lines ---------- */
+  /* ---------- level filter: hides the lines below the chosen level, the shown ones and the new ones ---------- */
   const LEVEL_RANK = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
-  const appLevel = { gateway: 'INFO', orders: 'INFO', 'shipping': 'INFO' };
-  // A step whose START line was not written still exists in the app. The lines inside it then carry
-  // the nearest written ancestor as their span, the way the MDC would.
+  const appLevel = {};
+  let allLevel = 'DEBUG';
+  // A step whose START line is hidden still exists in the app. The lines inside it then hang under
+  // the nearest shown ancestor.
   const skipped = new Map();
   const resolveSpan = span => { while (span && skipped.has(span)) span = skipped.get(span); return span; };
   function admit(l) {
@@ -781,13 +484,39 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     return span === l.span && parent === l.parent ? l : Object.assign({}, l, { span, parent });
   }
 
+  /* ---------- apps: each service.name gets a colour and a filter entry when its first line arrives ---------- */
+  const APP_COLORS = ['#5a4ec3', '#0a7864', '#9d3b84', '#a94e18', '#4a59c2', '#137a79', '#76690d', '#a82f64'];
+  const apps = new Set();
+  function addApp(app) {
+    if (apps.has(app)) return;
+    apps.add(app);
+    appLevel[app] = allLevel;
+    appStyle.textContent += '[data-app="' + CSS.escape(app) + '"] { --app-c: ' + APP_COLORS[(apps.size - 1) % APP_COLORS.length] + '; }\n';
+    const o = document.createElement('option');
+    o.value = app;
+    o.textContent = app;
+    lvlApp.appendChild(o);
+  }
+
   let mode = 'tree';
   let lineSeq = 0, grew = false;
+  const KEEP_MAX = 10000;
+  const received = [];   // the lines a changed filter rebuilds the view from
+  function receive(texts) {
+    for (const text of texts) {
+      const l = readLine(text);
+      if (!l) continue;
+      addApp(l.app);
+      received.push(l);
+      ingest(l);
+    }
+    if (received.length > KEEP_MAX) received.splice(0, received.length - KEEP_MAX);
+  }
   function ingest(raw) {
     const l = admit(raw);
     if (!l) return;
     l.id = ++lineSeq;
-    addToTrace(l);
+    if (l.trace) addToTrace(l);   // a line outside any trace shows only in the flat and raw modes
     flatAppend(l);
     rawAppend(l);
     grew = true;
@@ -865,7 +594,7 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     const byStart = (a, b) => a.start - b.start;
     roots.sort(byStart);
     kids.forEach(a => a.sort(byStart));
-    const now = state.simNow;
+    const now = Date.now();
     let unfinished = 0, running = 0;
     const visit = (s, parentClosed) => {
       // A synchronous child cannot outlive its parent. MQ consumers run on their own.
@@ -886,18 +615,18 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
   }
 
   function summaryHTML(tr, s, info, isRoot) {
-    const parts = ['<span>' + (isRoot ? tr.lines.length : blockCount(s, info)) + ' satır</span>'];
+    const parts = ['<span>' + count(isRoot ? tr.lines.length : blockCount(s, info), 'line', 'lines') + '</span>'];
     if (s.end != null) {
       parts.push('<span class="' + outCls(s.outcome) + '">' + esc(s.outcome || 'END') + (s.status ? ' ' + s.status : '') + '</span>');
       parts.push('<span>' + fmtDur(s.end - s.start) + '</span>');
     } else if (s.unfinished) {
-      parts.push('<span class="v-err">END yok</span>');
+      parts.push('<span class="v-err">no END</span>');
     } else {
-      parts.push('<span class="v-run">sürüyor</span><span>' + fmtDur(state.simNow - s.start) + '</span>');
+      parts.push('<span class="v-run">running</span><span>' + fmtDur(Date.now() - s.start) + '</span>');
     }
     if (isRoot) {
-      if (info.unfinished) parts.push('<span class="v-err">' + info.unfinished + ' adım bitmedi</span>');
-      if (info.running && s.end != null) parts.push('<span class="v-run">' + info.running + ' adım sürüyor</span>');
+      if (info.unfinished) parts.push('<span class="v-err">' + count(info.unfinished, 'step', 'steps') + ' unfinished</span>');
+      if (info.running && s.end != null) parts.push('<span class="v-run">' + count(info.running, 'step', 'steps') + ' running</span>');
       if (tr.levels.ERROR) parts.push('<span class="v-err">' + tr.levels.ERROR + ' ERROR</span>');
       if (tr.levels.WARN) parts.push('<span class="v-warn">' + tr.levels.WARN + ' WARN</span>');
     }
@@ -910,24 +639,25 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     const act = o ? (isRoot ? 'group' : 'fold') : 'json';
     const jsonOpen = tr.jsonOpen.has(l.id);
     const fold = o
-      ? '<button class="fold' + (o.open ? '' : ' closed') + '" type="button" data-act="' + act + '" data-span="' + o.step.id + '" data-fk="f' + o.step.id + '" aria-expanded="' + o.open + '" aria-label="' + (o.open ? 'Bloğu kapat' : 'Bloğu aç') + '">' + CHEV + '</button>'
+      ? '<button class="fold' + (o.open ? '' : ' closed') + '" type="button" data-act="' + act + '" data-span="' + esc(o.step.id) + '" data-fk="f' + esc(o.step.id) + '" aria-expanded="' + o.open + '" aria-label="' + (o.open ? 'Collapse block' : 'Expand block') + '">' + CHEV + '</button>'
       : '<span class="sp"></span>';
     const ph = l.phase ? '<span class="ph ' + (l.phase === 'START' ? 'start' : 'end') + '">' + l.phase + '</span>' : '';
     const fields = isRoot ? Object.assign({}, l.fields, { user: l.user || '-', trace: l.trace.slice(0, 8) }) : l.fields;
     const sum = o && (isRoot || !o.open) ? summaryHTML(tr, o.step, o.info, isRoot) : '';
-    let html = '<div class="ln lvl-' + l.level + (isRoot ? ' root' : '') + '" style="--d:' + d + '" data-act="' + act + '" data-span="' + l.span + '" data-line="' + l.id + '">' +
+    const app = esc(l.app);
+    let html = '<div class="ln lvl-' + l.level + (isRoot ? ' root' : '') + '" style="--d:' + d + '" data-act="' + act + '" data-span="' + esc(l.span) + '" data-line="' + l.id + '">' +
       '<button class="ts" type="button" data-act="json" data-line="' + l.id + '" data-fk="j' + l.id + '" aria-expanded="' + jsonOpen + '">' + fmtLocal(l.ts) + '</button>' +
       '<span class="lv">' + l.level + '</span>' +
-      '<span class="ap" data-app="' + l.app + '">' + l.app + '</span>' +
-      '<span class="msg">' + fold + '<span class="ap-in" data-app="' + l.app + '">' + l.app + '</span>' +
-      '<span class="ev">' + l.event + '</span>' + ph + '<span class="kv">' + kvHTML(fields) + '</span>' + sum + '</span></div>';
+      '<span class="ap" data-app="' + app + '">' + app + '</span>' +
+      '<span class="msg">' + fold + '<span class="ap-in" data-app="' + app + '">' + app + '</span>' +
+      evHTML(l) + ph + '<span class="kv">' + kvHTML(fields) + '</span>' + sum + '</span></div>';
     if (l.fields['error.stack_trace']) html += '<div class="xrow" style="--d:' + d + '"><pre class="stack">' + esc(l.fields['error.stack_trace']) + '</pre></div>';
     if (jsonOpen) html += '<div class="xrow" style="--d:' + d + '"><div class="jsonbox">' + jsonHTML(l) + '</div></div>';
     return html;
   }
 
   function annoHTML(s, d) {
-    const text = s.unfinished ? 'END gelmedi' : 'sürüyor · ' + fmtDur(state.simNow - s.start);
+    const text = s.unfinished ? 'END never came' : 'running · ' + fmtDur(Date.now() - s.start);
     return '<div class="ln anno' + (s.unfinished ? ' unf' : '') + '" style="--d:' + d + '"><span></span><span></span><span class="ap"></span>' +
       '<span class="msg"><span class="sp"></span><em>' + text + '</em></span></div>';
   }
@@ -960,7 +690,7 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     tr.el.innerHTML = out.join('');
     tr.el.classList.toggle('open', tr.open);
     if (fk) {
-      const el = tr.el.querySelector('[data-fk="' + fk + '"]');
+      const el = tr.el.querySelector('[data-fk="' + CSS.escape(fk) + '"]');
       if (el) el.focus({ preventScroll: true });
     }
   }
@@ -1009,24 +739,26 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     const dur = f.durationMs != null ? ' · <span class="dur">' + fmtDur(f.durationMs) + '</span>' : '';
     const res = f.outcome ? ' · <span class="' + outCls(f.outcome) + '">' + esc((f.status ? f.status + ' ' : '') + f.outcome) + '</span>' : '';
     const bad = f.outcome && f.outcome !== 'SUCCESS';
-    const more = keys => keys.filter(k => f[k] != null).map(k => ' ' + pair(k, f[k])).join('');
-    const who = (t, x) => '<span class="who" data-app="' + (t === 'PSP' ? '' : t) + '">' + esc(x || t) + '</span>';
+    // the fields the line does not already show, such as business keys, follow at the end
+    const others = shown => Object.keys(f).filter(k => !shown.includes(k) && !HIDDEN_FIELDS.has(k)).map(k => ' ' + pair(k, f[k])).join('');
+    const END = ['status', 'outcome', 'durationMs'];
+    const who = t => '<span class="who" data-app="' + (apps.has(t) ? esc(t) : '') + '">' + esc(t) + '</span>';
     switch (l.event + ':' + l.phase) {
-      case 'HTTP_IN:START': return ['go', 'istek geldi', ' ' + esc(f.route) + (l.user ? ' · kullanıcı ' + esc(l.user) : '') + more(['quoteId'])];
-      case 'HTTP_IN:END': return ['back' + (bad ? ' bad' : ''), 'cevap verildi', res + more(['reason', 'downstream', 'exception', 'orderId']) + dur];
-      case 'HTTP_OUT:START': return ['go', 'çağrı gönderildi', ' → ' + who(f.target) + ' ' + esc(f.op) + more(['refNo'])];
-      case 'HTTP_OUT:END': return ['back' + (bad ? ' bad' : ''), 'cevap alındı', ' ← ' + who(f.target) + res + more(['error']) + dur];
-      case 'MQ_OUT:START': return ['go', 'mesaj gönderiliyor', ' → kuyruk ' + esc(f.queue) + more(['orderId', 'count'])];
-      case 'MQ_OUT:END': return ['back', 'mesaj kuyruğa bırakıldı', dur];
-      case 'MQ_IN:START': return ['go', 'mesaj alındı', ' ← kuyruk ' + esc(f.queue) + more(['orderId', 'count'])];
-      case 'MQ_IN:END': return ['back' + (bad ? ' bad' : ''), 'mesaj işlendi', res + dur];
-      case 'JOB:START': return ['go', 'zamanlanmış iş başladı', ' ' + esc(f.job)];
-      case 'JOB:END': return ['back' + (bad ? ' bad' : ''), 'iş bitti', res + more(['expired']) + dur];
-      case 'METHOD:START': return ['go', 'metot çağrıldı', ' ' + esc(f.method) + ' <span>' + esc(f.args || '') + '</span>'];
+      case 'HTTP_IN:START': return ['go', 'request received', ' ' + esc(f.route) + (l.user ? ' · user ' + esc(l.user) : '') + others(['route'])];
+      case 'HTTP_IN:END': return ['back' + (bad ? ' bad' : ''), 'response sent', res + others(['route', ...END]) + dur];
+      case 'HTTP_OUT:START': return ['go', 'call sent', ' → ' + who(f.target) + ' ' + esc(f.op) + others(['target', 'op'])];
+      case 'HTTP_OUT:END': return ['back' + (bad ? ' bad' : ''), 'response received', ' ← ' + who(f.target) + res + others(['target', 'op', ...END]) + dur];
+      case 'MQ_OUT:START': return ['go', 'publishing message', ' → queue ' + esc(f.queue) + others(['queue'])];
+      case 'MQ_OUT:END': return ['back', 'message queued', others(['queue', ...END]) + dur];
+      case 'MQ_IN:START': return ['go', 'message received', ' ← queue ' + esc(f.queue) + others(['queue'])];
+      case 'MQ_IN:END': return ['back' + (bad ? ' bad' : ''), 'message processed', res + others(['queue', ...END]) + dur];
+      case 'JOB:START': return ['go', 'scheduled job started', ' ' + esc(f.job) + others(['job'])];
+      case 'JOB:END': return ['back' + (bad ? ' bad' : ''), 'job finished', res + others(['job', ...END]) + dur];
+      case 'METHOD:START': return ['go', 'method called', ' ' + esc(f.method) + ' <span>' + esc(f.args || '') + '</span>' + others(['method', 'args'])];
       case 'METHOD:END': return f.exception
-        ? ['back bad', 'metot hata fırlattı', ' ' + esc(f.method) + ' → <span class="' + outCls(f.outcome) + '">' + esc(f.exception) + '</span>' + dur]
-        : ['back', 'metot döndü', ' ' + esc(f.method) + (f.result != null ? ' → ' + esc(f.result) : '') + dur];
-      default: return ['', l.event, ' ' + kvHTML(f)];
+        ? ['back bad', 'method threw', ' ' + esc(f.method) + ' → <span class="' + outCls(f.outcome) + '">' + esc(f.exception) + '</span>' + others(['method', 'exception', ...END]) + dur]
+        : ['back', 'method returned', ' ' + esc(f.method) + (f.result != null ? ' → ' + esc(f.result) : '') + others(['method', 'result', ...END]) + dur];
+      default: return ['', esc(l.event || l.message), ' ' + kvHTML(f)];
     }
   }
   function flowLineHTML(l, d) {
@@ -1034,13 +766,13 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     const mark = l.phase === 'START' ? '┌─▶ ' : l.phase === 'END' ? '└─◀ ' : '•   ';
     return '<div class="fl lvl-' + l.level + '" style="--d:' + d + '">' +
       '<span class="ts">' + fmtLocal(l.ts) + '</span>' +
-      '<span class="ap" data-app="' + l.app + '">' + l.app + '</span>' +
+      '<span class="ap" data-app="' + esc(l.app) + '">' + esc(l.app) + '</span>' +
       '<span class="fx"><span class="mk ' + cls + '">' + mark + '</span><span class="say">' + sayText + '</span>' + rest + '</span></div>';
   }
   function flowOpenEnd(s, d) {
     const text = s.unfinished
-      ? '<span class="mk back bad">└─✕ </span><span class="lost">bitmedi</span>'
-      : '<span class="mk wait">└┄┄ </span><span class="pending">sürüyor · ' + fmtDur(state.simNow - s.start) + '</span>';
+      ? '<span class="mk back bad">└─✕ </span><span class="lost">unfinished</span>'
+      : '<span class="mk wait">└┄┄ </span><span class="pending">running · ' + fmtDur(Date.now() - s.start) + '</span>';
     return '<div class="fl" style="--d:' + d + '"><span></span><span class="ap"></span><span class="fx">' + text + '</span></div>';
   }
   function renderFlowGroup(tr, info) {
@@ -1078,13 +810,11 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
   }
 
   /* ---------- sequence diagrams: every request drawn from its own lines, stacked ---------- */
-  const APPS = new Set(['gateway', 'orders', 'shipping']);
-  const EXT_LABEL = { 'ext:Kullanıcı': 'Kullanıcı', 'ext:Zamanlayıcı': 'Zamanlayıcı', 'ext:RabbitMQ': 'RabbitMQ', 'ext:PSP': 'Ödeme sağlayıcı' };
+  const EXT_LABEL = { 'ext:User': 'User', 'ext:Scheduler': 'Scheduler', 'ext:RabbitMQ': 'RabbitMQ' };
   const SQ = { rowH: 20, top: 34, gutter: 50, minCol: 64, font: 10.5 };
   const tw = (t, size) => String(t).length * (size || SQ.font) * 0.6;   // IBM Plex Mono advance is 0.6 em
   const stepFields = s => ((s.startLine || s.endLine || {}).fields) || {};
   const plainKV = f => Object.entries(f).filter(([k]) => !HIDDEN_FIELDS.has(k)).map(([k, v]) => k + '=' + v).join(' ');
-  const NOTE_KEYS = ['result', 'reason', 'refNo', 'orderId'];
 
   function seqName(s) {
     if (!s) return '…';
@@ -1095,42 +825,41 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
   }
   function seqStatus(info) {
     const r = info.roots[0];
-    if (!r || r.end == null) return r && r.unfinished ? ['v-err', 'bitmedi'] : ['run', 'sürüyor'];
+    if (!r || r.end == null) return r && r.unfinished ? ['v-err', 'unfinished'] : ['run', 'running'];
     return [outCls(r.outcome), (r.status ? r.status + ' ' : '') + (r.outcome || 'END')];
   }
   function callLabel(s, l) {
     const f = l.fields;
     switch (s.event) {
       case 'HTTP_IN': return f.route || 'HTTP';
-      case 'HTTP_OUT': return (f.op || 'çağrı') + (f.refNo ? ' ' + f.refNo : '');
+      case 'HTTP_OUT': return f.op || 'call';
       case 'MQ_OUT':
-      case 'MQ_IN': return f.queue || 'kuyruk';
-      case 'JOB': return f.job || 'iş';
+      case 'MQ_IN': return f.queue || 'queue';
+      case 'JOB': return f.job || 'job';
       case 'METHOD': { const m = String(f.method || ''); return m.slice(m.indexOf('.') + 1) + '()'; }
-      default: return l.event;
+      default: return l.event || '…';
     }
   }
   function retLabel(s, l) {
     const f = l.fields;
     const dur = f.durationMs != null ? ' · ' + fmtDur(f.durationMs) : '';
-    if (s.event === 'METHOD') return f.exception ? ['✕ ' + f.exception + dur, outCls(f.outcome)] : ['döndü' + dur, 'ret'];
-    if (s.event === 'MQ_OUT') return ['bırakıldı' + dur, 'ret'];
+    if (s.event === 'METHOD') return f.exception ? ['✕ ' + f.exception + dur, outCls(f.outcome)] : ['returned' + dur, 'ret'];
+    if (s.event === 'MQ_OUT') return ['queued' + dur, 'ret'];
     if (s.event === 'MQ_IN') return ['ack' + dur, f.outcome && f.outcome !== 'SUCCESS' ? outCls(f.outcome) : 'ret'];
-    if (s.event === 'JOB') return ['bitti' + dur, f.outcome && f.outcome !== 'SUCCESS' ? outCls(f.outcome) : 'ret'];
+    if (s.event === 'JOB') return ['done' + dur, f.outcome && f.outcome !== 'SUCCESS' ? outCls(f.outcome) : 'ret'];
     const res = [f.status, f.outcome].filter(v => v != null).join(' ');
-    return [(res || 'cevap') + dur, f.outcome ? outCls(f.outcome) : 'ret'];
+    return [(res || 'response') + dur, f.outcome ? outCls(f.outcome) : 'ret'];
   }
+  // a note is kept short: its first two fields
   function noteKV(l) {
     const f = l.fields;
-    let keys = NOTE_KEYS.filter(k => f[k] != null).slice(0, 2);
-    if (!keys.length) keys = Object.keys(f).filter(k => !HIDDEN_FIELDS.has(k)).slice(0, 1);
-    return keys.map(k => k + '=' + f[k]).join(' ');
+    return Object.keys(f).filter(k => !HIDDEN_FIELDS.has(k)).slice(0, 2).map(k => k + '=' + f[k]).join(' ');
   }
   function noteText(l) {
     const kv = noteKV(l);
-    return l.event + (kv ? ' ' + kv : '');
+    return (l.event || l.message) + (kv ? ' ' + kv : '');
   }
-  // The orders's HTTP_IN is the far end of the gateway's HTTP_OUT: one call, drawn once.
+  // An HTTP_IN whose parent is an HTTP_OUT is the far end of that call: one call, drawn once.
   function mergedParent(steps, s) {
     const p = s.parent ? steps.get(s.parent) : null;
     return s.event === 'HTTP_IN' && p && p.event === 'HTTP_OUT' && p.startLine ? p : null;
@@ -1145,7 +874,7 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     for (const s of steps.values()) if (isMerged(s)) mergedChildOf.set(s.parent, s);
     const owner = s => {
       const f = stepFields(s);
-      if (s.event === 'HTTP_OUT') return (APPS.has(f.target) ? 'app:' : 'ext:') + f.target;
+      if (s.event === 'HTTP_OUT') return (apps.has(f.target) ? 'app:' : 'ext:') + f.target;
       if (s.event === 'MQ_OUT') return 'ext:RabbitMQ';
       if (s.event === 'METHOD') return 'cls:' + String(f.method || '?').split('.')[0];
       return 'app:' + s.app;
@@ -1153,8 +882,8 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     const caller = s => {
       const p = parentOf(s);
       if (p) return owner(p);
-      if (s.event === 'HTTP_IN') return 'ext:Kullanıcı';
-      if (s.event === 'JOB') return 'ext:Zamanlayıcı';
+      if (s.event === 'HTTP_IN') return 'ext:User';
+      if (s.event === 'JOB') return 'ext:Scheduler';
       if (s.event === 'MQ_IN') return 'ext:RabbitMQ';
       return 'app:' + s.app;
     };
@@ -1256,7 +985,7 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     const lastY = rows.length ? Y(rows.length - 1) : SQ.top;
     const endY = lastY + (acts.some(a => a.running || (a.lost && a.r1 == null)) ? 22 : 10);
     const t0 = tr.lines[0].ts;
-    const appAttr = p => (p.app ? ' data-app="' + p.app + '"' : '');
+    const appAttr = p => (p.app ? ' data-app="' + esc(p.app) + '"' : '');
     const out = [];
     let maxRight = cx[cx.length - 1] + colW[colW.length - 1] / 2;
 
@@ -1265,7 +994,7 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
       if (ids.length < 2 || parts[ids[0]].ext) continue;
       const a = ids[0], b = ids[ids.length - 1];
       const gx = cx[a] - colW[a] / 2 + 2, gw = cx[b] + colW[b] / 2 - 2 - gx;
-      out.push('<rect class="sq-group" data-app="' + g + '" x="' + gx + '" y="0" width="' + gw + '" height="' + (endY + 2) + '" rx="5"/>');
+      out.push('<rect class="sq-group" data-app="' + esc(g) + '" x="' + gx + '" y="0" width="' + gw + '" height="' + (endY + 2) + '" rx="5"/>');
     }
     parts.forEach((p, i) => {
       out.push('<line class="sq-life" x1="' + cx[i] + '" y1="19" x2="' + cx[i] + '" y2="' + endY + '"/>');
@@ -1287,9 +1016,9 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
         const xx = actX(a) + 4;
         out.push('<path class="sq-x" d="M' + (xx - 4) + ' ' + (y1 - 4) + ' l8 8 M' + (xx + 4) + ' ' + (y1 - 4) + ' l-8 8"/>');
         out.push('<text class="sq-lost" x="' + (xx + 8) + '" y="' + (y1 + 3.5) + '">bitmedi</text>');
-        maxRight = Math.max(maxRight, xx + 8 + tw('bitmedi'));
+        maxRight = Math.max(maxRight, xx + 8 + tw('unfinished'));
       } else if (a.running) {
-        const xx = actX(a) + 12, txt = 'sürüyor ' + fmtDur(state.simNow - a.s.start);
+        const xx = actX(a) + 12, txt = 'running ' + fmtDur(Date.now() - a.s.start);
         out.push('<text class="sq-wait" x="' + xx + '" y="' + (y1 - 1) + '">' + esc(txt) + '</text>');
         maxRight = Math.max(maxRight, xx + tw(txt));
       }
@@ -1303,7 +1032,7 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     rows.forEach((r, i) => {
       const y = Y(i);
       out.push('<text class="sq-time" x="2" y="' + (y + 3.5) + '">+' + fmtDur(r.l.ts - t0) + '</text>');
-      const title = '<title>' + esc(fmtLocal(r.l.ts) + ' ' + r.l.level + ' ' + r.l.app + ' ' + r.l.event + (r.l.phase ? ' ' + r.l.phase : '') + ' ' + plainKV(r.l.fields)) + '</title>';
+      const title = '<title>' + esc(fmtLocal(r.l.ts) + ' ' + r.l.level + ' ' + r.l.app + ' ' + (r.l.event || r.l.message) + (r.l.phase ? ' ' + r.l.phase : '') + ' ' + plainKV(r.l.fields)) + '</title>';
       if (r.kind === 'note') {
         const a = actOf.get(r.s.id);
         const nx = a && a.on === r.on ? actX(a) + 12 : cx[idx.get(r.on)] + 8;
@@ -1345,7 +1074,7 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     });
 
     const W = Math.ceil(maxRight + 8), H = endY + 4;
-    return '<svg class="seq-svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Sıra diyagramı">' + out.join('') + '</svg>';
+    return '<svg class="seq-svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Sequence diagram">' + out.join('') + '</svg>';
   }
 
   function mermaidText(m) {
@@ -1361,7 +1090,7 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
         g = p.group;
         if (!p.ext && size.get(g) > 1) { out.push('    box rgb(244,247,250) ' + clean(g)); inBox = true; }
       }
-      out.push('    ' + (p.key === 'ext:Kullanıcı' ? 'actor' : 'participant') + ' ' + id.get(p.key) + ' as ' + clean(p.label));
+      out.push('    ' + (p.key === 'ext:User' ? 'actor' : 'participant') + ' ' + id.get(p.key) + ' as ' + clean(p.label));
     }
     if (inBox) out.push('    end');
     const active = new Map();   // only deactivate what was activated, Mermaid rejects the rest
@@ -1376,15 +1105,15 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
         if (m.actOf.has(r.s.id) && (active.get(r.from) || 0) > 0) { out.push('    deactivate ' + a); active.set(r.from, active.get(r.from) - 1); }
       }
     }
-    for (const a of m.acts) if (a.lost) out.push('    Note over ' + id.get(a.on) + ': bitmedi');
+    for (const a of m.acts) if (a.lost) out.push('    Note over ' + id.get(a.on) + ': unfinished');
     return out.join('\n');
   }
 
-  const userOf = tr => (tr.lines.find(l => l.user) || {}).user || 'anonim';
+  const userOf = tr => (tr.lines.find(l => l.user) || {}).user || 'anonymous';
   function capHTML(tr, info, extra) {
     const r = info.roots[0];
     const [cls, label] = seqStatus(info);
-    const dur = !r ? '' : r.end != null ? fmtDur(r.end - r.start) : r.unfinished ? '' : fmtDur(state.simNow - r.start);
+    const dur = !r ? '' : r.end != null ? fmtDur(r.end - r.start) : r.unfinished ? '' : fmtDur(Date.now() - r.start);
     return '<div class="sq-cap"><span>' + fmtLocal(tr.lines[0].ts) + '</span><b>' + esc(seqName(r)) + '</b>' +
       '<span>' + esc(userOf(tr)) + '</span><span class="' + cls + '">' + esc(label) + '</span><span>' + dur + '</span>' + extra + '</div>';
   }
@@ -1420,7 +1149,7 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     const text = mermaidText(seqModel(tr));
     const show = () => { tr.mmOpen = !tr.mmOpen; tr.seqDirty = true; render(); };
     const copied = () => {
-      tr.mmMsg = 'Kopyalandı';
+      tr.mmMsg = 'Copied';
       tr.seqDirty = true;
       render();
       setTimeout(() => { tr.mmMsg = null; tr.seqDirty = true; }, 1600);
@@ -1437,8 +1166,8 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     if (s.event === 'HTTP_OUT') {
       const t = stepFields(s).target;
       if (far) return { label: far.app, app: far.app };
-      if (APPS.has(t)) return { label: t, app: t };
-      return { label: EXT_LABEL['ext:' + t] || t || 'dış sistem', ext: true };
+      if (apps.has(t)) return { label: t, app: t };
+      return { label: EXT_LABEL['ext:' + t] || t || 'external system', ext: true };
     }
     if (s.event === 'MQ_OUT') return { label: 'RabbitMQ', ext: true };
     return { label: s.app, app: s.app };
@@ -1447,11 +1176,11 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     const f = stepFields(s);
     switch (s.event) {
       case 'HTTP_IN': return f.route || 'HTTP';
-      case 'HTTP_OUT': return far ? stepFields(far).route || f.op || 'çağrı' : (f.op || 'çağrı') + (f.refNo ? ' ' + f.refNo : '');
+      case 'HTTP_OUT': return far ? stepFields(far).route || f.op || 'call' : f.op || 'call';
       case 'MQ_OUT':
-      case 'MQ_IN': return f.queue || 'kuyruk';
-      case 'JOB': return f.job || 'iş';
-      case 'METHOD': return f.method || 'metot';
+      case 'MQ_IN': return f.queue || 'queue';
+      case 'JOB': return f.job || 'job';
+      case 'METHOD': return f.method || 'method';
       default: return s.event || '…';
     }
   }
@@ -1495,12 +1224,12 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     for (const m of [1, 2, 5]) if (m * p >= raw) return m * p;
     return 10 * p;
   }
-  const tickLabel = ms => (ms === 0 ? '0' : ms < 1000 ? ms + ' ms' : String(+(ms / 1000).toFixed(1)).replace('.', ',') + ' s');
+  const tickLabel = ms => (ms === 0 ? '0' : ms < 1000 ? ms + ' ms' : String(+(ms / 1000).toFixed(1)) + ' s');
 
   function wfHTML(tr, info) {
     const rows = wfRows(tr, info);
     if (!rows.length) return '';
-    const now = state.simNow;
+    const now = Date.now();
     let t0 = Infinity, t1 = -Infinity, prev = null;
     for (const r of rows) {
       if (r.l) { t0 = Math.min(t0, r.l.ts); t1 = Math.max(t1, r.l.ts); continue; }
@@ -1530,14 +1259,14 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     for (const r of rows) {
       if (r.l) {
         out.push('<div class="wr note lvl-' + r.l.level + '" style="--d:' + r.d + '"><span class="w-ap"></span>' +
-          '<span class="w-nm"><b>' + esc(r.l.event) + '</b> ' + esc(noteKV(r.l)) + '</span>' +
+          '<span class="w-nm"><b>' + esc(r.l.event || r.l.message) + '</b> ' + esc(noteKV(r.l)) + '</span>' +
           '<span class="w-tk"><span class="w-dot ' + r.l.level + '" style="left:' + pct(r.l.ts - t0) + '"></span></span><span class="w-du"></span></div>');
         continue;
       }
       const s = r.s, f = s.endLine ? s.endLine.fields : {};
       const bad = r.state === 'done' && f.outcome && f.outcome !== 'SUCCESS';
       const tag = bad ? ' <span class="' + outCls(f.outcome) + '">' + esc((f.status ? f.status + ' ' : '') + f.outcome) + '</span>' : '';
-      const du = r.state === 'lost' ? ['lost', 'bitmedi'] : r.state === 'run' ? ['run', fmtDur(now - r.a)] : [bad ? outCls(f.outcome) : '', fmtDur(r.b - r.a)];
+      const du = r.state === 'lost' ? ['lost', 'unfinished'] : r.state === 'run' ? ['run', fmtDur(now - r.a)] : [bad ? outCls(f.outcome) : '', fmtDur(r.b - r.a)];
       // a call's row carries the most severe line from either end
       const lvl = [s.startLine, s.endLine, r.far && r.far.startLine, r.far && r.far.endLine]
         .reduce((a, l) => (l && LEVEL_RANK[l.level] > LEVEL_RANK[a] ? l.level : a), 'DEBUG');
@@ -1569,24 +1298,24 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
   function flatAppend(l) {
     const el = document.createElement('div');
     el.className = 'ln lvl-' + l.level;
-    el.dataset.t = l.trace;
+    if (l.trace) el.dataset.t = l.trace;
     el.dataset.line = l.id;
     const ph = l.phase ? '<span class="ph ' + (l.phase === 'START' ? 'start' : 'end') + '">' + l.phase + '</span>' : '';
+    const trace = l.trace ? ' <span class="tr" data-act="trace" style="--tc:var(--t' + hueOf(l.trace) + ')">trace=' + esc(l.trace.slice(0, 4)) + '</span>' : '';
     const user = l.user ? ' user=<b>' + esc(l.user) + '</b>' : '';
+    const app = esc(l.app);
     el.innerHTML =
       '<button class="ts" type="button" data-act="json" aria-expanded="false">' + fmtLocal(l.ts) + '</button>' +
       '<span class="lv">' + l.level + '</span>' +
-      '<span class="ap" data-app="' + l.app + '">' + l.app + '</span>' +
-      '<span class="msg"><span class="ap-in" data-app="' + l.app + '">' + l.app + '</span>' +
-      '<span class="ev">' + l.event + '</span>' + ph +
-      ' <span class="tr" data-act="trace" style="--tc:var(--t' + hueOf(l.trace) + ')">trace=' + l.trace.slice(0, 4) + '</span>' +
-      user + ' ' + kvHTML(l.fields) + '</span>';
+      '<span class="ap" data-app="' + app + '">' + app + '</span>' +
+      '<span class="msg"><span class="ap-in" data-app="' + app + '">' + app + '</span>' +
+      evHTML(l) + ph + trace + user + ' ' + kvHTML(l.fields) + '</span>';
     flatEl.appendChild(el);
     flatLines.set(l.id, l);
     if (l.fields['error.stack_trace']) {
       const x = document.createElement('div');
       x.className = 'xrow';
-      x.dataset.t = l.trace;
+      if (l.trace) x.dataset.t = l.trace;
       x.innerHTML = '<pre class="stack">' + esc(l.fields['error.stack_trace']) + '</pre>';
       flatEl.appendChild(x);
     }
@@ -1601,7 +1330,7 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
   function setHl(id) {
     hlId = id;
     flatEl.classList.toggle('dim', !!id);
-    hlStyle.textContent = id ? '.flat.dim .ln[data-t="' + id + '"]{opacity:1}' : '';
+    hlStyle.textContent = id ? '.flat.dim .ln[data-t="' + CSS.escape(id) + '"]{opacity:1}' : '';
   }
   flatEl.addEventListener('click', e => {
     const a = e.target.closest('[data-act]');
@@ -1621,7 +1350,7 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     if (!l) return;
     const x = document.createElement('div');
     x.className = 'xrow json-row';
-    x.dataset.t = l.trace;
+    if (l.trace) x.dataset.t = l.trace;
     x.innerHTML = '<div class="jsonbox">' + jsonHTML(l) + '</div>';
     row.after(x);
     a.setAttribute('aria-expanded', 'true');
@@ -1632,7 +1361,7 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
   /* ---------- raw mode: the JSON line exactly as written ---------- */
   function rawAppend(l) {
     const el = document.createElement('div');
-    el.textContent = JSON.stringify(ecs(l));
+    el.textContent = l.text;
     rawEl.appendChild(el);
     while (rawEl.childElementCount > LINE_MAX) rawEl.firstElementChild.remove();
   }
@@ -1685,17 +1414,20 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
   });
 
   function updatePlay() {
-    playBtn.innerHTML = state.playing ? PAUSE + '<span>Duraklat</span>' : PLAY + '<span>Devam et</span>';
-    liveEl.textContent = state.playing ? 'canlı' : 'duraklatıldı';
+    playBtn.innerHTML = state.playing ? PAUSE + '<span>Pause</span>' : PLAY + '<span>Resume</span>';
+    liveEl.textContent = state.playing ? 'live' : 'paused';
     liveEl.classList.toggle('paused', !state.playing);
   }
-  playBtn.addEventListener('click', () => { state.playing = !state.playing; updatePlay(); });
+  playBtn.addEventListener('click', () => {
+    state.playing = !state.playing;
+    updatePlay();
+    if (state.playing) schedulePull(0);
+  });
 
-  const lvlApp = $('lvlApp'), lvlSeg = $('lvlSeg');
   function showLevel() {
     const a = lvlApp.value;
-    const vals = a === 'all' ? Object.values(appLevel) : [appLevel[a]];
-    const cur = vals.every(v => v === vals[0]) ? vals[0] : null;   // apps differ: nothing pressed
+    const cur = a !== 'all' ? appLevel[a]
+      : Object.values(appLevel).every(v => v === allLevel) ? allLevel : null;   // apps differ: nothing pressed
     for (const b of lvlSeg.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.level === cur));
   }
   lvlApp.addEventListener('change', showLevel);
@@ -1703,57 +1435,77 @@ mark.idp .jk { color: var(--accent); font-weight: 600; }
     const b = e.target.closest('button[data-level]');
     if (!b) return;
     const a = lvlApp.value;
-    for (const app of Object.keys(appLevel)) if (a === 'all' || a === app) appLevel[app] = b.dataset.level;
+    if (a === 'all') allLevel = b.dataset.level;
+    for (const app of apps) if (a === 'all' || a === app) appLevel[app] = b.dataset.level;
     showLevel();
+    rebuild();
   });
-  showLevel();
+
+  // draws every kept line again, so a changed filter applies to the lines already shown;
+  // the requests the reader opened or folded stay that way
+  function rebuild() {
+    const was = new Map(order.map(tr => [tr.id, tr]));
+    traces.clear();
+    order.length = 0;
+    skipped.clear();
+    flatLines.clear();
+    for (const el of [treeEl, flowEl, seqWrap, wfWrap, flatEl, rawEl]) el.textContent = '';
+    for (const l of received) ingest(l);
+    for (const tr of order) {
+      const old = was.get(tr.id);
+      if (old) { tr.open = old.open; tr.folded = old.folded; }
+    }
+    render();
+  }
 
   openBtn.addEventListener('click', () => {
     state.openAll = !state.openAll;
-    openBtn.textContent = state.openAll ? 'Hepsini kapat' : 'Hepsini aç';
+    openBtn.textContent = state.openAll ? 'Collapse all' : 'Expand all';
     for (const tr of order) { tr.open = state.openAll; tr.dirty = true; }
     render();
   });
 
-  /* ---------- clock ---------- */
-  const RATE = 0.1;       // simulated ms per real ms: a 200 ms request takes about 2 s to watch
-  const IDLE_MAX = 900;   // real ms of silence before the clock skips ahead to the next line
-  let lastReal = performance.now(), lastRender = 0;
+  /* ---------- lines from the IDE ---------- */
+  // The plugin replaces the marker below with a call that hands over up to `max` of the lines received
+  // since the previous call, as a JSON array of strings. Opened outside the IDE, the page stays empty.
+  function pullFromIde(max, onLines, onFail) {
+    /*TRACE_TAIL_BRIDGE*/
+  }
+  const PULL_MAX = 1000, PULL_EVERY = 250;
+  let pullTimer = null, pulling = false;
+  function schedulePull(ms) {
+    clearTimeout(pullTimer);
+    pullTimer = setTimeout(pull, ms);
+  }
+  function pull() {
+    if (pulling || !state.playing) return;   // while paused the lines wait in the IDE
+    pulling = true;
+    pullFromIde(String(PULL_MAX), json => {
+      pulling = false;
+      let texts = [];
+      try { texts = JSON.parse(json); } catch (e) { /* a broken batch is skipped */ }
+      receive(texts);
+      schedulePull(texts.length >= PULL_MAX ? 0 : PULL_EVERY);   // a full batch means more are waiting
+    }, () => {
+      pulling = false;
+      schedulePull(PULL_EVERY);
+    });
+  }
+
+  /* ---------- redraw: steps still running show their time so far ---------- */
+  let lastRender = 0;
   function frame(now) {
-    const dt = Math.min(now - lastReal, 250);
-    lastReal = now;
-    if (state.playing) {
-      state.simNow += dt * RATE;
-      spawnDue();
-      const next = Math.min(queue.length ? queue[0].ts : Infinity, nextArrival);
-      const gap = IDLE_MAX * RATE;
-      if (next - state.simNow > gap) state.simNow = next - gap;
-      drain();
-    }
     if (now - lastRender > 90) { render(); lastRender = now; }
     requestAnimationFrame(frame);
   }
 
-  function prewarm(count) {
-    for (let i = 0; i < count; i++) {
-      enqueue(nextScenario(nextArrival));
-      nextArrival += ri(500, 900);
-    }
-    while (queue.length) {
-      state.simNow = queue[0].ts;
-      ingest(queue.shift());
-    }
-    state.simNow += 40;
-    nextArrival = Math.max(nextArrival, state.simNow + 250);
-  }
-
   updatePlay();
-  prewarm(3);
-  if (order[0]) order[0].open = true;
+  showLevel();
   let saved = 'tree';
   try { saved = localStorage.getItem('log-view-mode') || 'tree'; } catch (e) { /* storage may be blocked */ }
   setMode(MODES.includes(saved) ? saved : 'tree');
   requestAnimationFrame(frame);
+  pull();
 })();
 </script>
 

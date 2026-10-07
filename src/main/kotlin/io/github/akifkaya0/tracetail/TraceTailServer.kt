@@ -33,8 +33,8 @@ class TraceTailServer : Disposable {
         thread(name = "Trace Tail listener", isDaemon = true) { acceptLoop() }
     }
 
-    /** Takes every line received since the previous call, oldest first. */
-    fun drain(): List<String> = synchronized(inbox) { inbox.toList().also { inbox.clear() } }
+    /** Takes up to [max] of the waiting lines, oldest first. */
+    fun drain(max: Int): List<String> = synchronized(inbox) { List(minOf(max, inbox.size)) { inbox.removeFirst() } }
 
     fun stats() = Stats(port, connections.size, received.get(), dropped.get())
 

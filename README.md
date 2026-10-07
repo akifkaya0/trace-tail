@@ -4,9 +4,8 @@ An IntelliJ IDEA plugin that shows the logs of the applications you run from the
 trace-grouped view. Each request is folded into a single line; opening it shows its log lines
 nested by `trace.id`, `span.id` and `parent.id`.
 
-**Status:** the plugin receives the logs of the applications it starts and counts them in the
-tool window's status line. The view itself still shows simulated data; showing the received logs
-is the next step.
+**Status:** the plugin receives the logs of the applications it starts and shows them in the tool
+window. The interface is in Turkish and has a light theme only.
 
 ## How it works
 
@@ -50,6 +49,24 @@ plugin started the application:
 If the trace and span ids are in the thread context under other names, map them to the ECS names
 with `KeyValuePair` elements inside `EcsLayout`, for example
 `<KeyValuePair key="trace.id" value="${ctx:traceId}"/>`.
+
+## What the view reads
+
+| Field | Use |
+|---|---|
+| `@timestamp`, `log.level`, `message`, `service.name` | Every line |
+| `trace.id`, `span.id` | Groups the lines by request; a line without `trace.id` shows only in the flat and raw modes |
+| `parent.id` | Nests a step under the step that started it |
+| `event.action` | The event's name, such as `HTTP_IN`; a line without it shows its message instead |
+| `phase` | `START` or `END` of a step |
+| `user.id` | The user who made the request |
+
+The flow, sequence and waterfall modes draw the steps whose `event.action` is `HTTP_IN`, `HTTP_OUT`,
+`MQ_IN`, `MQ_OUT`, `JOB` or `METHOD`, using `route`, `target`, `op`, `queue`, `job`, `method`,
+`outcome`, `status` and `durationMs`. Every other field is shown as `key=value`.
+
+The level buttons hide lines below the chosen level, for one application or for all. The plugin
+keeps the last 10,000 lines in the view, so a changed level applies to those too.
 
 The plugin reads each connection on its own thread and keeps at most 20,000 unread lines, dropping
 the oldest. An application's logging therefore never waits on the IDE. If the IDE closes while the
