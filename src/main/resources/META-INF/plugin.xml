@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>io.github.akifkaya0.tracetail</id>
     <name>Trace Tail</name>
-    <vendor url="https://github.com/akifkaya0">akifkaya0</vendor>
+    <vendor url="https://github.com/akifkaya0">Mehmet Akif Kaya</vendor>
 
     <description><![CDATA[
         Live view of the logs written by the applications you run from the IDE.

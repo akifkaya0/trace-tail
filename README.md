@@ -11,13 +11,18 @@ Trace Tail tool window, built from the IDE's own components.
 
 | Tab | Shows |
 |---|---|
-| Tree | One row per request, opening into its steps; the selected line's JSON and stack trace beside it |
+| Tree | One row per request, opening into its steps. Beside it, the selected line's JSON and stack trace (Line) and the selected request as a sequence diagram (Sequence) |
 | Flat | Every line in arrival order, as a console; stack trace frames link to the source |
 | Raw | The JSON lines as received |
 
 The Tree's **Timeline** column places each row on its request's own time line, from the request's
 first line to its last: a step as a bar in its app's colour (outlined while it runs, red when its
 END never came), a line inside a step as a diamond.
+
+The **Sequence** diagram draws a lifeline for each app, for each class whose methods log `METHOD`
+steps (kept next to its app), and for the parties that write no lines: the user, the scheduler, a
+queue and the systems an `HTTP_OUT` calls. Each call, return and note is a row in the order the
+lines were written; a row's tooltip is its line. **Copy as Mermaid** copies the diagram as text.
 
 Each Run or Debug window also gets a **Trace Tail** tab once its app's first line arrives. It shows
 the requests that app took part in, with the lines the other apps wrote for them. The app is
