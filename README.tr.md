@@ -126,8 +126,8 @@ yapılandırmasını değiştirmek gerekmez.
 ## Uygulamanın ihtiyaç duyduğu
 
 Uygulama Logback 1.2 veya sonrası ya da Log4j2 2.17 veya sonrası ile loglama yapmalı ve Java 8 veya
-sonrasında çalışmalıdır. Agent; Logback 1.2.13 ve 1.5.20, Log4j2 2.17.2 ve 2.24.3 ile ve bunların her
-biri üzerinde Spring Boot 3.5 ile denenmiştir.
+sonrasında çalışmalıdır. Agent'ın testleri onu Logback 1.2.13 ve 1.5.20, Log4j2 2.17.2 ve 2.24.3 ile
+ve bunların her biri üzerinde Spring Boot 3.5 ile, Java 21'de çalıştırır.
 
 Hangi olayların gönderileceğine, konsolda olduğu gibi uygulamanın kendi logger seviyeleri karar
 verir; bir logger'ın seviyesinin elediği satır Trace Tail'e de gelmez. Yalnızca konsol appender'ına
@@ -190,3 +190,7 @@ alınmıştır.
 Agent, `agent` alt projesidir. Derleme, jar dosyasını eklentinin `agent` klasörüne, eklentinin class
 path'inin dışına koyar; böylece agent yalnızca çalıştırılan uygulamanın JVM'ine yüklenir, IDE'ye
 yüklenmez.
+
+Agent'ın testleri, `agent` alt projesinin `test` görevidir. Her test, küçük bir uygulamayı
+[Uygulamanın ihtiyaç duyduğu](#uygulamanın-ihtiyaç-duyduğu) bölümündeki log kurulumlarından biriyle,
+agent'la kendi JVM'inde başlatır ve portuna gelen satırları kontrol eder.

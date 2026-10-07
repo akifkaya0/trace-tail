@@ -119,8 +119,8 @@ logging configuration.
 ## What the application needs
 
 The application logs through Logback 1.2 or later, or Log4j2 2.17 or later, and runs on Java 8 or
-later. The agent was tried with Logback 1.2.13 and 1.5.20, Log4j2 2.17.2 and 2.24.3, and Spring
-Boot 3.5 on either of them.
+later. The agent's tests run it on Logback 1.2.13 and 1.5.20, Log4j2 2.17.2 and 2.24.3, and
+Spring Boot 3.5 on either of them, all on Java 21.
 
 The application's own logger levels decide which events are sent, as for its console; a line that a
 logger's level drops does not reach Trace Tail either. A filter put only on the console appender,
@@ -183,3 +183,7 @@ showing in the view. The screenshots above were taken with these applications.
 The agent is the `agent` subproject. The build puts its jar in the plugin's `agent` folder, outside
 the plugin's class path, so the agent is loaded only into the JVM of the application being run, not
 into the IDE.
+
+The agent's tests are the `agent` subproject's `test` task. Each test starts a small application in
+its own JVM with the agent, on one of the logging setups in
+[What the application needs](#what-the-application-needs), and checks the lines that reach its port.
