@@ -4,10 +4,55 @@
     <vendor url="https://github.com/akifkaya0">Mehmet Akif Kaya</vendor>
 
     <description><![CDATA[
-        Live view of the logs written by the applications you run from the IDE.
-        Each request is folded into a single line; opening it shows its log lines
-        nested by trace and span.
+        <p>Live view of the logs of the Java applications you run from the IDE, grouped by the request
+        they belong to.</p>
+        <p>Each request is folded into a single row; opening it shows its log lines nested by
+        <code>trace.id</code>, <code>span.id</code> and <code>parent.id</code>. So for a request that
+        passes through several applications, you can see at a glance which steps it took, which step
+        started which, and where it failed.</p>
+        <p><img src="https://raw.githubusercontent.com/akifkaya0/trace-tail/main/docs/images/tree-sequence.png"
+                width="700" height="235"
+                alt="The Tree tab, with the selected request as a sequence diagram"/></p>
+        <ul>
+            <li><b>Tree</b>: one row per request, with its line count, outcome, duration and the number of
+                WARN and ERROR lines; opening it shows its steps</li>
+            <li><b>Sequence</b>: the selected request as a diagram of who called whom across apps, classes,
+                queues and outside systems; <b>Copy as Mermaid</b> copies it as text</li>
+            <li><b>Flat</b>: every line in arrival order, coloured per request; clicking a request's id
+                fades the others out, and stack trace frames link to the source</li>
+            <li><b>Raw</b>: the JSON lines as the agent sent them</li>
+            <li>A <b>Trace Tail</b> tab in each Run and Debug window, showing only the requests that app
+                took part in</li>
+            <li><b>Jump to Source</b> (F4) from a log line to the class and line that wrote it</li>
+            <li>A level filter per app, pause, Scroll to the End and Soft-Wrap</li>
+        </ul>
+        <p><img src="https://raw.githubusercontent.com/akifkaya0/trace-tail/main/docs/images/flat.png"
+                width="700" height="233"
+                alt="The Flat tab, with an error and its stack trace on a tinted background"/></p>
+        <p>The application needs no added dependency and no change to its logging configuration. When a
+        Java run configuration is run or debugged, the plugin adds its agent to the JVM. The agent adds
+        an appender to the application's Logback (1.2 or later) or Log4j2 (2.17 or later), which sends
+        each log event as an ECS JSON line to the IDE over a loopback port. The application runs on
+        Java 8 or later.</p>
+        <p><img src="https://raw.githubusercontent.com/akifkaya0/trace-tail/main/docs/images/raw.png"
+                width="700" height="236"
+                alt="The Raw tab, with the ECS JSON lines as received"/></p>
+        <p>See the <a href="https://github.com/akifkaya0/trace-tail">README</a> for the fields the view
+        reads.</p>
     ]]></description>
+
+    <change-notes><![CDATA[
+        <p><b>1.0.0</b>: the first release.</p>
+        <ul>
+            <li>Tree, Flat and Raw tabs, with the selected line (Line) and request (Sequence) beside the
+                Tree</li>
+            <li>Sequence diagrams of a request across apps, which can be copied as Mermaid</li>
+            <li>A Trace Tail tab in each Run and Debug window</li>
+            <li>Logs sent by a Java agent from Logback 1.2 or later and Log4j2 2.17 or later, with no
+                change to the application</li>
+            <li>Level filter, pause, Scroll to the End, Soft-Wrap and Jump to Source</li>
+        </ul>
+    ]]></change-notes>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.java</depends>

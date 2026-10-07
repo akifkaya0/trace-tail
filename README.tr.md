@@ -9,8 +9,33 @@ göre toplanmış olarak gelir: her istek tek bir satıra katlanır; açıldığ
 uygulamadan geçen bir isteğin hangi adımlardan oluştuğunu, hangi adımın hangisini başlattığını ve
 nerede hata verdiğini tek bakışta görebilirsiniz.
 
-**Durum:** eklenti, başlattığı uygulamaların loglarını alır ve bunları IDE'nin kendi bileşenleriyle
-oluşturulmuş Trace Tail araç penceresinde gösterir.
+![Tree sekmesi: her istek için bir satır ve seçili, hata almış isteğin sequence diyagramı](docs/images/tree-sequence.png)
+
+## Özellikler
+
+- **Her istek için bir satır**: satır sayısı, sonucu, süresi ve `WARN` ile `ERROR` satırlarının
+  sayısıyla; açıldığında adımlarını, hangi adımın hangisini başlattığına göre iç içe gösterir
+- **Bir sequence diyagramı**: seçili isteği uygulamalar, sınıflar, kuyruklar ve dış sistemler
+  arasında çizer; diyagram Mermaid olarak kopyalanabilir
+- **Tüm satırların bulunduğu bir konsol**: her istek kendi rengindedir; bir isteğin kimliğine
+  tıklamak diğerlerini soluklaştırır
+- **Her Run ve Debug penceresinde bir Trace Tail sekmesi**: yalnızca o uygulamanın katıldığı
+  istekleri gösterir
+- **Jump to Source**: bir log satırından onu yazan sınıfa ve satıra gider
+- **Uygulamada değişiklik gerekmez**: bir Java agent çalışma anında kendini Logback'e ya da
+  Log4j2'ye ekler
+
+## Kurulum
+
+1. Bu projeyi IntelliJ IDEA'da açın ve `buildPlugin` Gradle görevini çalıştırın (Gradle araç
+   penceresi → **trace-tail → Tasks → intellij platform → buildPlugin**).
+2. **Settings → Plugins** içinde dişli simgesine tıklayın, **Install Plugin from Disk…** seçeneğini
+   seçin ve `build/distributions/trace-tail-1.0.0.zip` dosyasını gösterin.
+3. IDE'den bir Java uygulaması çalıştırın. Logları **View → Tool Windows → Trace Tail** altında
+   görünür.
+
+Agent'ın desteklediği log kurulumları için
+[Uygulamanın ihtiyaç duyduğu](#uygulamanın-ihtiyaç-duyduğu) bölümüne bakın.
 
 ## Araç penceresi
 
@@ -22,19 +47,45 @@ Araç penceresinde aynı loglara üç farklı açıdan bakan üç sekme vardır:
 | Flat | Tüm satırlar geliş sırasına göre, konsol biçiminde; stack trace satırları kaynak koda bağlantı verir |
 | Raw | JSON satırları alındığı haliyle; agent'ın tam olarak ne gönderdiğini görmek için kullanışlıdır |
 
+### Tree
+
+Her istek bir satırdır: önce isteğin ilk satırı, ardından kaç satırı olduğu, sonucu ve süresi, kaç
+`WARN` ve `ERROR` satırı olduğu ve adımlarından kaçının henüz `END` satırı gelmediği. Bir satır
+açıldığında isteğin adımları, her biri onu başlatan adımın altında olacak şekilde görünür. Bir satır
+oku, çift tıklama ya da Sol ve Sağ tuşlarıyla katlanır/açılır.
+
+**F4** ya da bağlam menüsündeki **Jump to Source**, satırı yazan sınıfı (`log.logger`) açar;
+satırda `log.origin.file.line` varsa doğrudan o satıra gider. Log4j2'nin asenkron logger'ları satır
+numarası göndermediği için bu durumda yalnızca sınıf açılır.
+
+### Sequence
+
+Tree'nin yanındaki **Sequence** diyagramı seçili isteği, kimin kimi çağırdığını gösteren bir akış
+olarak çizer. Her uygulama için, metotları `METHOD` adımları loglayan her sınıf için (kendi
+uygulamasının yanında tutulur) ve satır yazmayan taraflar için bir yaşam çizgisi bulunur: kullanıcı,
+zamanlayıcı, bir kuyruk ve bir `HTTP_OUT`'un çağırdığı dış sistemler. Her çağrı, dönüş ve not,
+satırların yazıldığı sırayla bir satırdır; bir satırın üzerine gelindiğinde ipucu (tooltip) olarak o
+log satırı görünür. **Copy as Mermaid** diyagramı metin olarak kopyalar; bu metin örneğin bir
+dokümana ya da pull request açıklamasına yapıştırılabilir.
+
+### Flat
+
 **Flat** sekmesi her satırı Tree'deki gibi renklendirir; uyarı ve hata satırlarının, stack
 trace'leriyle birlikte, arka planı da renklidir. Her satır, zamanından ve seviyesinden sonra
 isteğinin kimliğinin ilk sekiz karakterini, o isteğe özgü bir renkte gösterir. Bu kimliğe tıklamak
 o isteğe odaklanır: diğer isteklerin satırları soluklaşır. Kimliğe yeniden tıklanınca tüm satırlar
 eski haline döner.
 
-**Sequence** diyagramı seçili isteği, kimin kimi çağırdığını gösteren bir akış olarak çizer. Her
-uygulama için, metotları `METHOD` adımları loglayan her sınıf için (kendi uygulamasının yanında
-tutulur) ve satır yazmayan taraflar için bir yaşam çizgisi bulunur: kullanıcı, zamanlayıcı, bir
-kuyruk ve bir `HTTP_OUT`'un çağırdığı dış sistemler. Her çağrı, dönüş ve not, satırların yazıldığı
-sırayla bir satırdır; bir satırın üzerine gelindiğinde ipucu (tooltip) olarak o log satırı görünür.
-**Copy as Mermaid** diyagramı metin olarak kopyalar; bu metin örneğin bir dokümana ya da pull
-request açıklamasına yapıştırılabilir.
+![Flat sekmesi: tüm satırlar geliş sırasına göre; bir hata ve stack trace'i renkli arka planda](docs/images/flat.png)
+
+### Raw
+
+**Raw** sekmesi her satırı agent'ın gönderdiği JSON olarak gösterir; böylece bir satırın hangi
+alanları taşıdığını kontrol edebilirsiniz.
+
+![Raw sekmesi: ECS JSON satırları alındığı haliyle](docs/images/raw.png)
+
+### Run ve Debug pencereleri
 
 Her Run veya Debug penceresi de, uygulamasının ilk satırı geldiğinde bir **Trace Tail** sekmesi
 kazanır. Bu sekme yalnızca o uygulamanın katıldığı istekleri, diğer uygulamaların bu istekler için
@@ -42,11 +93,7 @@ yazdığı satırlarla birlikte gösterir; yani bir uygulamaya odaklanırken ist
 kaybetmezsiniz. Uygulama, agent'ın `service.name` olarak gönderdiği run configuration adıyla
 eşleştirilir. Düz bir Run konsolu gibi sekmesi olmayan bir run penceresine sekme eklenmez.
 
-Tree sekmelerinde **F4** ya da bağlam menüsündeki **Jump to Source**, satırı yazan sınıfı
-(`log.logger`) açar; satırda `log.origin.file.line` varsa doğrudan o satıra gider. Log4j2'nin
-asenkron logger'ları satır numarası göndermediği için bu durumda yalnızca sınıf açılır.
-
-Araç çubuğundaki düğmeler şunları yapar:
+### Araç çubuğu
 
 - görünümü duraklatır; yeni satırlar kaybolmaz, devam ettirilene kadar IDE'de bekler
 - görünümü temizler
@@ -59,8 +106,6 @@ Araç çubuğundaki düğmeler şunları yapar:
 - **Soft-Wrap**'i açıp kapatır: açıkken uzun satırlar ağaçta ve konsollarda bir sonraki satırda
   devam eder; kapalıyken her biri tek satırda kalır ve görünüm yatay kaydırılır. IDE bu seçimi
   hatırlar.
-
-Tree'de bir satır oku, çift tıklama ya da Sol ve Sağ tuşlarıyla katlanır/açılır.
 
 ## Nasıl çalışır
 
@@ -133,13 +178,14 @@ mesaj vermeden atar.
 - Derlemek için: yerel bir IntelliJ IDEA 2026.2 kurulumu. Yolu `gradle.properties` dosyasında
   (`platformLocalPath`) ayarlanır ve paketle gelen Java 25 çalışma ortamı toolchain olarak kullanılır.
 
-## Çalıştırma
+## Kaynaktan çalıştırma
 
 Projeyi IntelliJ IDEA'da açın ve `runIde` Gradle görevini çalıştırın. Eklentinin kurulu olduğu ayrı
 bir deneme (sandbox) IDE'si başlar; görünüm **View → Tool Windows → Trace Tail** altındadır. Deneme
 IDE'si, eklentiyi denemek için hazırlanmış iki küçük uygulamanın bulunduğu `sample` klasörünü açar;
 ayrıntılar için [sample/README.md](sample/README.md) dosyasına bakın. Bu IDE'de bir Java uygulamasını
-çalıştırdığınızda logları burada görmeye başlarsınız.
+çalıştırdığınızda logları burada görmeye başlarsınız. Yukarıdaki ekran görüntüleri bu uygulamalarla
+alınmıştır.
 
 Agent, `agent` alt projesidir. Derleme, jar dosyasını eklentinin `agent` klasörüne, eklentinin class
 path'inin dışına koyar; böylece agent yalnızca çalıştırılan uygulamanın JVM'ine yüklenir, IDE'ye

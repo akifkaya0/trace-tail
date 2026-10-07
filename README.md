@@ -8,8 +8,29 @@ belong to: each request is folded into a single line; opening it shows its log l
 `trace.id`, `span.id` and `parent.id`. So for a request that passes through several applications,
 you can see at a glance which steps it took, which step started which, and where it failed.
 
-**Status:** the plugin receives the logs of the applications it starts and shows them in the
-Trace Tail tool window, built from the IDE's own components.
+![The Tree tab: one row per request, and the selected failed request drawn as a sequence diagram](docs/images/tree-sequence.png)
+
+## Features
+
+- **One row per request**, with its line count, outcome, duration and the number of `WARN` and
+  `ERROR` lines; opening it shows its steps, nested by which step started which
+- **A sequence diagram** of the selected request across apps, classes, queues and outside systems,
+  which can be copied as Mermaid
+- **A console of every line**, coloured per request; clicking a request's id fades the others out
+- **A Trace Tail tab in each Run and Debug window**, showing only the requests that app took part in
+- **Jump to Source** from a log line to the class and line that wrote it
+- **No change to the application**: a Java agent adds itself to Logback or Log4j2 at run time
+
+## Installation
+
+1. Open this project in IntelliJ IDEA and run the `buildPlugin` Gradle task (Gradle tool window →
+   **trace-tail → Tasks → intellij platform → buildPlugin**).
+2. In **Settings → Plugins**, click the gear icon, choose **Install Plugin from Disk…** and select
+   `build/distributions/trace-tail-1.0.0.zip`.
+3. Run a Java application from the IDE. Its logs show under **View → Tool Windows → Trace Tail**.
+
+See [What the application needs](#what-the-application-needs) for the logging setups the agent
+supports.
 
 ## The tool window
 
@@ -21,17 +42,43 @@ The tool window has three tabs that look at the same logs from three angles:
 | Flat | Every line in arrival order, as a console; stack trace frames link to the source |
 | Raw | The JSON lines as received; useful to see exactly what the agent sent |
 
+### Tree
+
+Each request is one row: its first line, then how many lines it has, its outcome and duration, how
+many `WARN` and `ERROR` lines it has, and how many of its steps have no `END` line yet. Opening a
+row shows the request's steps, each under the step that started it. A row folds with its arrow, a
+double click, or the Left and Right keys.
+
+**F4** or **Jump to Source** in the context menu opens the class that wrote the line
+(`log.logger`), going straight to `log.origin.file.line` when the line has it. Log4j2's
+asynchronous loggers send no line number, so for them only the class opens.
+
+### Sequence
+
+The **Sequence** diagram beside the Tree draws the selected request as a flow of who called whom.
+It has a lifeline for each app, for each class whose methods log `METHOD` steps (kept next to its
+app), and for the parties that write no lines: the user, the scheduler, a queue and the outside
+systems an `HTTP_OUT` calls. Each call, return and note is a row in the order the lines were
+written; hovering over a row shows its line as a tooltip. **Copy as Mermaid** copies the diagram as
+text, ready to paste into a document or a pull request description.
+
+### Flat
+
 The **Flat** tab colours each line like the Tree, and gives warnings and errors, with their stack
 traces, a tinted background. After its time and level, each line shows the first eight characters
 of its request's id, in a colour of the request's own. Clicking that id focuses the request: the
 lines of the other requests fade, until the id is clicked again.
 
-The **Sequence** diagram draws the selected request as a flow of who called whom. It has a lifeline
-for each app, for each class whose methods log `METHOD` steps (kept next to its app), and for the
-parties that write no lines: the user, the scheduler, a queue and the outside systems an `HTTP_OUT`
-calls. Each call, return and note is a row in the order the lines were written; hovering over a row
-shows its line as a tooltip. **Copy as Mermaid** copies the diagram as text, ready to paste into a
-document or a pull request description.
+![The Flat tab: every line in arrival order, with an error and its stack trace on a tinted background](docs/images/flat.png)
+
+### Raw
+
+The **Raw** tab shows each line as the JSON the agent sent, so you can check which fields a line
+carries.
+
+![The Raw tab: the ECS JSON lines as received](docs/images/raw.png)
+
+### Run and Debug windows
 
 Each Run or Debug window also gets a **Trace Tail** tab once its app's first line arrives. It shows
 only the requests that app took part in, with the lines the other apps wrote for them, so you keep
@@ -39,11 +86,7 @@ the rest of the request in view while you focus on one app. The app is matched b
 configuration's name, which the agent sends as `service.name`. A run window without tabs, such as a
 plain Run console, gets no tab.
 
-In the Tree tabs, **F4** or **Jump to Source** in the context menu opens the class that wrote the
-line (`log.logger`), going straight to `log.origin.file.line` when the line has it. Log4j2's
-asynchronous loggers send no line number, so for them only the class opens.
-
-The toolbar's buttons:
+### Toolbar
 
 - pause the view; new lines are not lost but wait in the IDE until resumed
 - clear the view
@@ -56,8 +99,6 @@ The toolbar's buttons:
 - turn **Soft-Wrap** on or off: wrapped, long lines continue on the next line in the tree and the
   consoles; unwrapped, each stays on one line and the view scrolls sideways. The IDE remembers the
   choice.
-
-In the Tree, a row folds with its arrow, a double click, or the Left and Right keys.
 
 ## How it works
 
@@ -131,13 +172,13 @@ lines without a message.
 - To build: a local IntelliJ IDEA 2026.2 installation. Its path is set in `gradle.properties`
   (`platformLocalPath`), and its bundled Java 25 runtime is used as the toolchain.
 
-## Running
+## Running from source
 
 Open the project in IntelliJ IDEA and run the `runIde` Gradle task. A separate sandbox IDE starts
 with the plugin installed; the view is under **View → Tool Windows → Trace Tail**. The sandbox IDE
 opens the `sample` folder, two small applications to try the plugin with; see
 [sample/README.md](sample/README.md). Once you run a Java application in this IDE, its logs start
-showing in the view.
+showing in the view. The screenshots above were taken with these applications.
 
 The agent is the `agent` subproject. The build puts its jar in the plugin's `agent` folder, outside
 the plugin's class path, so the agent is loaded only into the JVM of the application being run, not
