@@ -26,11 +26,12 @@ lines were written; a row's tooltip is its line. **Copy as Mermaid** copies the 
 
 Each Run or Debug window also gets a **Trace Tail** tab once its app's first line arrives. It shows
 the requests that app took part in, with the lines the other apps wrote for them. The app is
-matched by the run configuration's name, which is also `tracetail.app`, so keep `serviceName` as in
-the example below. A run window without tabs, such as a plain Run console, gets no tab.
+matched by the run configuration's name, which the agent sends as `service.name`. A run window
+without tabs, such as a plain Run console, gets no tab.
 
 In the Tree tabs, **F4** or **Jump to Source** in the context menu opens the class named by the
-line's `log.logger`, at `log.origin.file.line` when the layout sends it. The toolbar pauses the
+line's `log.logger`, at `log.origin.file.line` when the line has it. Log4j2's asynchronous loggers
+send no line number. The toolbar pauses the
 view (new lines wait in the IDE until resumed), clears it, hides lines below a level for one app or
 all, expands or collapses the requests, and turns **Soft-Wrap** on or off: wrapped, long lines
 continue on the next line in the tree and the consoles; unwrapped, each stays on one line and the
@@ -41,45 +42,37 @@ In the Tree, a row folds with its arrow, a double click, or the Left and Right k
 ## How it works
 
 The plugin listens on a loopback port for each open project. When a Java run configuration
-(Application, Spring Boot, …) is run or debugged, the plugin adds two system properties:
+(Application, Spring Boot, …) is run or debugged, the plugin adds its agent to the JVM:
 
-| Property | Value |
-|---|---|
-| `tracetail.port` | The port the plugin listens on |
-| `tracetail.app` | The run configuration's name |
-
-An application sends its logs only if its Log4j2 configuration reacts to these properties. Each log
-event travels as one [ECS](https://www.elastic.co/guide/en/ecs-logging/java/current/setup.html)
-JSON line.
-
-## Connecting an application
-
-The application needs Log4j2 2.15 or later and `co.elastic.logging:log4j2-ecs-layout`. Add the
-appender and its reference inside a `SystemPropertyArbiter`, so that they exist only when the
-plugin started the application:
-
-```xml
-<Appenders>
-    <!-- your existing appenders -->
-    <SystemPropertyArbiter propertyName="tracetail.port">
-        <Socket name="TraceTailAppender" host="127.0.0.1" port="${sys:tracetail.port}">
-            <EcsLayout serviceName="${sys:tracetail.app}"/>
-        </Socket>
-    </SystemPropertyArbiter>
-</Appenders>
-<Loggers>
-    <Root level="info">
-        <!-- your existing appender references -->
-        <SystemPropertyArbiter propertyName="tracetail.port">
-            <AppenderRef ref="TraceTailAppender"/>
-        </SystemPropertyArbiter>
-    </Root>
-</Loggers>
+```
+-javaagent:<plugin folder>/agent/trace-tail-agent.jar=<port>,<run configuration name>
 ```
 
-If the trace and span ids are in the thread context under other names, map them to the ECS names
-with `KeyValuePair` elements inside `EcsLayout`, for example
-`<KeyValuePair key="trace.id" value="${ctx:traceId}"/>`.
+The agent waits until the application's Logback or Log4j2 starts, then adds an appender to its root
+logger. The appender sends each event as one
+[ECS](https://www.elastic.co/guide/en/ecs-logging/java/current/setup.html) JSON line to the port.
+The application needs no dependency and no configuration change.
+
+## What the application needs
+
+The application logs through Logback 1.2 or later, or Log4j2 2.17 or later, and runs on Java 8 or
+later. The agent was tried with Logback 1.2.13 and 1.5.20, Log4j2 2.17.2 and 2.24.3, and Spring
+Boot 3.5 on either of them.
+
+The application's own levels decide which events are sent, as for its console. A logger with
+additivity turned off sends nothing, because the appender sits on the root logger.
+
+The agent writes these as fields under their own names:
+
+- the thread context (MDC) entries
+- SLF4J 2's key-value pairs, as in `log.atInfo().addKeyValue("phase", "START")`
+- a Log4j2 map message's entries; its `message` entry becomes the message
+
+So the ids must be in the thread context as `trace.id` and `span.id`. The view also accepts
+Micrometer's `traceId` and `spanId`.
+
+The agent hooks into Logback through the `logback.statusListenerClass` system property. If the
+application sets that property itself, its Logback lines are not sent.
 
 ## What the view reads
 
@@ -97,9 +90,10 @@ as `key=value`.
 
 The plugin keeps the last 10,000 lines, so a changed level applies to those too.
 
-The plugin reads each connection on its own thread and keeps at most 20,000 unread lines, dropping
-the oldest. An application's logging therefore never waits on the IDE. If the IDE closes while the
-application keeps running, Log4j2 reports every failed write on the console.
+An application's logging never waits on the IDE. The agent sends from its own thread and keeps at
+most 10,000 unsent lines; the plugin reads each connection on its own thread and keeps at most
+20,000 unread lines. Both drop the oldest line when full. If the IDE closes while the application
+keeps running, the agent drops the lines without a message.
 
 ## Requirements
 
@@ -111,3 +105,6 @@ application keeps running, Log4j2 reports every failed write on the console.
 
 Open the project in IntelliJ IDEA and run the `runIde` Gradle task. A sandbox IDE starts with
 the plugin installed; the view is under **View → Tool Windows → Trace Tail**.
+
+The agent is the `agent` subproject. The build puts its jar in the plugin's `agent` folder, outside
+the plugin's class path.

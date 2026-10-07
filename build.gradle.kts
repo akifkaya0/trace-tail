@@ -17,7 +17,13 @@ repositories {
     }
 }
 
+// The agent that the plugin adds to the applications it starts; it is not on the plugin's class path.
+val agent = configurations.create("agent") {
+    isCanBeConsumed = false
+}
+
 dependencies {
+    agent(project(":agent"))
     intellijPlatform {
         local(providers.gradleProperty("platformLocalPath"))
         // Java run configurations, which receive the receiver's port, and Java classes, which logs point to.
@@ -35,4 +41,10 @@ intellijPlatform {
     }
     buildSearchableOptions = false
     instrumentCode = false
+}
+
+tasks.prepareSandbox {
+    from(agent) {
+        into(pluginName.map { "$it/agent" })
+    }
 }
