@@ -29,6 +29,7 @@ import io.github.akifkaya0.tracetail.TraceFeed
 import io.github.akifkaya0.tracetail.TraceTailServer
 import io.github.akifkaya0.tracetail.model.Change
 import io.github.akifkaya0.tracetail.model.Level
+import io.github.akifkaya0.tracetail.model.TraceModel
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -110,6 +111,7 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
             append(" · ${Palette.plural(s.connections, "app")} connected")
             append(" · ${s.received} lines received")
             if (s.dropped > 0) append(" · ${s.dropped} oldest lines discarded")
+            append(" · ${feed.model.traceLines} of ${TraceModel.TRACE_LINES_MAX} lines in the Tree")
             if (feed.paused) append(" · paused")
         }
         statusLines.forEach { it.text = text }

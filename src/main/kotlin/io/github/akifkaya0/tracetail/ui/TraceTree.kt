@@ -432,17 +432,18 @@ internal class TraceTree(
         }
         parts = when (val r = node?.row) {
             is PendingRow -> listOf(r.text to if (r.lost) Palette.ERROR_ITALIC else Palette.RUNNING_ITALIC)
-            is LineRow -> lineParts(r) + if (r.group || (r.step != null && !expanded)) r.summary.map { (t, a) -> "   $t" to a } else emptyList()
+            is LineRow -> lineParts(r, expanded) + if (r.group || (r.step != null && !expanded)) r.summary.map { (t, a) -> "   $t" to a } else emptyList()
             else -> emptyList()
         }
     }
 
-    private fun lineParts(r: LineRow): List<Part> {
+    private fun lineParts(r: LineRow, expanded: Boolean): List<Part> {
         val l = r.line
         if (r.group && r.step == null) return listOf("trace " + r.trace.id.take(8) to Palette.BOLD)
         val parts = ArrayList<Part>()
         parts += l.title to if (l.event != null) Palette.BOLD else Palette.PLAIN
-        l.phase?.let { parts += " $it" to if (it.name == "START") Palette.START else Palette.END }
+        // a closed row stands for the whole step, and its summary tells how the step went
+        l.phase?.let { if (expanded || it.name != "START") parts += " $it" to if (it.name == "START") Palette.START else Palette.END }
         for ((key, value) in l.fields) {
             if (key in HIDDEN_FIELDS) continue
             parts += " $key=" to Palette.GRAY

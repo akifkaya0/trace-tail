@@ -115,6 +115,15 @@ class TraceModelTest {
         assertEquals(listOf("r2"), change.removed.map { it.id })
         assertEquals(listOf("r1", "r3"), model.traces.keys.take(2))
         assertEquals(TraceModel.TRACE_LINES_MAX + 1 - 4_999, model.traces.values.sumOf { it.lines.size })
+        // the count the status line shows
+        assertEquals(TraceModel.TRACE_LINES_MAX + 1 - 4_999, model.traceLines)
+    }
+
+    @Test
+    fun countsTheLinesARequestKeepsAfterDroppingSome() {
+        model.add((1..6_000).map { line("""{"message":"m $it","trace.id":"big","span.id":"s"}""") })
+        assertEquals(4_998, model.traces.getValue("big").lines.size)
+        assertEquals(4_998, model.traceLines)
     }
 
     @Test

@@ -9,7 +9,7 @@ göre toplanmış olarak gelir: her istek tek bir satıra katlanır; açıldığ
 uygulamadan geçen bir isteğin hangi adımlardan oluştuğunu, hangi adımın hangisini başlattığını ve
 nerede hata verdiğini tek bakışta görebilirsiniz.
 
-![Tree sekmesi: her istek için bir satır ve seçili, hata almış isteğin sequence diyagramı](docs/images/tree-sequence.png)
+![Tree sekmesi: her istek için bir satır ve seçili, reddedilmiş isteğin sequence diyagramı](docs/images/tree-sequence.png)
 
 ## Özellikler
 
@@ -166,8 +166,9 @@ gösterir. Diğer tüm alanlar `anahtar=değer` olarak gösterilir.
 Eklenti son 10.000 satırı bellekte tutar; böylece seviye filtresi değiştirildiğinde yeni filtre
 yalnızca yeni gelen satırlara değil, bu satırlara da uygulanır.
 
-Tree son 300 isteği, toplamda en fazla 100.000 satırla tutar. Bir istek en fazla 5.000 satır
-tutar; bunu geçince en eski satırlarını onda birlik parçalar halinde atar. Önce adımların içindeki
+Tree son 300 isteği, toplamda en fazla 100.000 satırla tutar; durum satırı kaç satır tuttuğunu
+gösterir. Bir istek en fazla 5.000 satır tutar; bunu geçince en eski satırlarını onda birlik
+parçalar halinde atar. Önce adımların içindeki
 satırlar atılır, en yeni 500 satır hariç; böylece her adım `START` ve `END` satırlarını korur. Bu
 yetmezse en eski bitmiş adımlar atılır. İsteğin satırı bundan sonra kaç satır atıldığını gösterir;
 `WARN` ve `ERROR` sayıları atılan satırları da içerir.

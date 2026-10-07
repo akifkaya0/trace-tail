@@ -8,7 +8,7 @@ belong to: each request is folded into a single line; opening it shows its log l
 `trace.id`, `span.id` and `parent.id`. So for a request that passes through several applications,
 you can see at a glance which steps it took, which step started which, and where it failed.
 
-![The Tree tab: one row per request, and the selected failed request drawn as a sequence diagram](docs/images/tree-sequence.png)
+![The Tree tab: one row per request, and the selected rejected request drawn as a sequence diagram](docs/images/tree-sequence.png)
 
 ## Features
 
@@ -160,8 +160,9 @@ Every other field is shown as `key=value`.
 The plugin keeps the last 10,000 lines in memory, so a changed level filter applies not only to new
 lines but to those too.
 
-The Tree keeps the last 300 requests, with at most 100,000 lines in all. A request keeps at most
-5,000 lines; past that, it drops its oldest lines, a tenth at a time. The lines inside its steps go
+The Tree keeps the last 300 requests, with at most 100,000 lines in all; the status line shows how
+many it holds. A request keeps at most 5,000 lines; past that, it drops its oldest lines, a tenth
+at a time. The lines inside its steps go
 first, except the newest 500, so every step keeps its `START` and `END` lines. When that is not
 enough, its oldest finished steps go. Its row then shows how many lines it dropped, and its `WARN`
 and `ERROR` counts still include them.

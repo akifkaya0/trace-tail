@@ -35,7 +35,8 @@ class TraceModel {
     val traces = LinkedHashMap<String, Trace>()
 
     /** The lines of [traces], all together. */
-    private var traceLines = 0
+    var traceLines = 0
+        private set
 
     /** The apps in the order their first line arrived. */
     val apps: Set<String> get() = appIndex.keys

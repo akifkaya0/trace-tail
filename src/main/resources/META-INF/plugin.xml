@@ -11,7 +11,7 @@
         passes through several applications, you can see at a glance which steps it took, which step
         started which, and where it failed.</p>
         <p><img src="https://raw.githubusercontent.com/akifkaya0/trace-tail/main/docs/images/tree-sequence.png"
-                width="700" height="235"
+                width="700" height="232"
                 alt="The Tree tab, with the selected request as a sequence diagram"/></p>
         <ul>
             <li><b>Tree</b>: one row per request, with its line count, outcome, duration and the number of
