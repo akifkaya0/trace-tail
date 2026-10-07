@@ -22,6 +22,7 @@ class TraceModel {
     private val appLevel = HashMap<String, Level>()
     private var allLevel = Level.DEBUG
     private val received = ArrayDeque<LogLine>()
+    private val shown = ArrayDeque<LogLine>()
 
     /** A step whose START line is hidden still exists in the app. The lines inside it hang under the nearest shown ancestor. */
     private val skipped = LinkedHashMap<String, String?>()
@@ -58,7 +59,7 @@ class TraceModel {
             }
             received.addLast(line)
             if (received.size > KEEP_MAX) received.removeFirst()
-            admit(line)?.let { admitted += it; place(it, changed, removed) }
+            admit(line)?.let { admitted += it; show(it); place(it, changed, removed) }
         }
         return Change(admitted, changed, removed, reset = false)
     }
@@ -66,16 +67,25 @@ class TraceModel {
     fun rebuild(): Change {
         traces.clear()
         skipped.clear()
-        val admitted = ArrayList<LogLine>()
-        for (line in received) admit(line)?.let { admitted += it; place(it, LinkedHashSet(), ArrayList()) }
-        return Change(admitted, traces.values.toList(), emptyList(), reset = true)
+        shown.clear()
+        for (line in received) admit(line)?.let { show(it); place(it, LinkedHashSet(), ArrayList()) }
+        return snapshot()
     }
 
     fun clear(): Change {
         received.clear()
         traces.clear()
         skipped.clear()
-        return Change(emptyList(), emptyList(), emptyList(), reset = true)
+        shown.clear()
+        return snapshot()
+    }
+
+    /** Everything shown now, for a view that starts late. */
+    fun snapshot() = Change(shown.toList(), traces.values.toList(), emptyList(), reset = true)
+
+    private fun show(line: LogLine) {
+        shown.addLast(line)
+        if (shown.size > KEEP_MAX) shown.removeFirst()
     }
 
     private fun levelOf(app: String) = appLevel[app] ?: allLevel

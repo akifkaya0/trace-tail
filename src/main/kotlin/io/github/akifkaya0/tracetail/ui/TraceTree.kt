@@ -49,7 +49,13 @@ internal class PendingRow(val text: String, val lost: Boolean)
  * The requests as a tree: one row per request, opening into its steps, nested by span.id and
  * parent.id. Requests the reader opened, and steps they folded, stay that way while lines arrive.
  */
-internal class TraceTree(private val project: Project, private val model: TraceModel, private val onSelect: (LogLine?) -> Unit) {
+internal class TraceTree(
+    private val project: Project,
+    private val model: TraceModel,
+    /** Which requests this tree shows. */
+    private val include: (Trace) -> Boolean,
+    private val onSelect: (LogLine?) -> Unit,
+) {
 
     /** The reader's choices for one request, kept across rebuilds. */
     private class TraceUi(val node: DefaultMutableTreeNode) {
@@ -120,21 +126,22 @@ internal class TraceTree(private val project: Project, private val model: TraceM
     fun selectedLine(): LogLine? = ((table.tree.selectionPath?.lastPathComponent as? DefaultMutableTreeNode)?.userObject as? LineRow)?.line
 
     fun apply(change: Change) {
-        if (!change.reset && change.changed.isEmpty() && change.removed.isEmpty()) return
+        val changed = change.changed.filter(include)
+        if (!change.reset && changed.isEmpty() && change.removed.isEmpty()) return
         val follow = atBottom()
         keepingSelection {
             if (change.reset) {
                 val old = HashMap(ui)
                 ui.clear()
                 root.removeAllChildren()
-                for (trace in model.traces.values) {
+                for (trace in changed) {
                     val u = TraceUi(DefaultMutableTreeNode())
                     old[trace.id]?.let { u.open = it.open; u.folded += it.folded }
                     ui[trace.id] = u
                     root.add(u.node)
                 }
                 treeModel.reload()
-                model.traces.values.forEach(::rebuild)
+                changed.forEach(::rebuild)
             } else {
                 for (trace in change.removed) {
                     val u = ui.remove(trace.id) ?: continue
@@ -144,7 +151,7 @@ internal class TraceTree(private val project: Project, private val model: TraceM
                         treeModel.nodesWereRemoved(root, intArrayOf(index), arrayOf(u.node))
                     }
                 }
-                for (trace in change.changed) {
+                for (trace in changed) {
                     if (trace.id !in ui) {
                         val u = TraceUi(DefaultMutableTreeNode())
                         ui[trace.id] = u
@@ -155,12 +162,12 @@ internal class TraceTree(private val project: Project, private val model: TraceM
                 }
             }
         }
-        if (follow && change.changed.isNotEmpty()) scrollToBottom()
+        if (follow && changed.isNotEmpty()) scrollToBottom()
     }
 
     /** Redraws the requests with running steps, whose times keep growing. */
     fun refreshRunning() {
-        val running = model.traces.values.filter { ui[it.id]?.wasRunning == true }
+        val running = ui.filterValues { it.wasRunning }.keys.mapNotNull { model.traces[it] }
         if (running.isNotEmpty()) keepingSelection { running.forEach(::rebuild) }
     }
 

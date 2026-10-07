@@ -19,4 +19,9 @@
                     factoryClass="io.github.akifkaya0.tracetail.TraceTailToolWindowFactory"/>
         <java.programPatcher implementation="io.github.akifkaya0.tracetail.TraceTailProgramPatcher"/>
     </extensions>
+
+    <projectListeners>
+        <listener class="io.github.akifkaya0.tracetail.TraceTailRunListener"
+                  topic="com.intellij.execution.ExecutionListener"/>
+    </projectListeners>
 </idea-plugin>

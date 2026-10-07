@@ -20,12 +20,16 @@ class Step(val id: String?) {
 class Trace(val id: String) {
     val steps = LinkedHashMap<String?, Step>()
     val lines = mutableListOf<LogLine>()
+
+    /** The apps that wrote at least one of the lines. */
+    val apps = HashSet<String>()
     private val levels = IntArray(Level.entries.size)
 
     fun count(level: Level) = levels[level.ordinal]
 
     fun add(line: LogLine) {
         lines += line
+        apps += line.app
         levels[line.level.ordinal]++
         val s = steps.getOrPut(line.span) { Step(line.span).also { it.start = line.time; it.app = line.app } }
         when (line.phase) {

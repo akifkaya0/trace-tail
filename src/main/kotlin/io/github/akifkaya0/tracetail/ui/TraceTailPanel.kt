@@ -4,7 +4,6 @@ import com.intellij.execution.filters.TextConsoleBuilderFactory
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.icons.AllIcons
-import com.intellij.ide.CommonActionsManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
@@ -20,58 +19,44 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
-import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.content.ContentFactory
 import com.intellij.util.ui.JBUI
+import io.github.akifkaya0.tracetail.TraceFeed
 import io.github.akifkaya0.tracetail.TraceTailServer
 import io.github.akifkaya0.tracetail.model.Change
 import io.github.akifkaya0.tracetail.model.Level
 import io.github.akifkaya0.tracetail.model.LogLine
-import io.github.akifkaya0.tracetail.model.TraceModel
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
-import javax.swing.Timer
 
 /**
- * The tool window's tabs: Tree (requests and their steps, with the selected line's details beside
- * it), Flat (every line in arrival order) and Raw (the JSON as received). New lines are taken from
- * the receiver on a timer; while paused they wait there.
+ * The tool window's tabs: Tree (every request, from every app), Flat (every line in arrival order)
+ * and Raw (the JSON as received).
  */
 class TraceTailPanel(private val project: Project, private val toolWindow: ToolWindow) : Disposable {
 
     private val server = project.service<TraceTailServer>()
-    private val model = TraceModel()
-    private val details = console()
+    private val feed = project.service<TraceFeed>()
     private val flat = console()
     private val raw = console()
-    private val tree = TraceTree(project, model, ::showDetails)
     private val statusLines = mutableListOf<JBLabel>()
-    private var paused = false
-    private var ticks = 0
-    private val timer = Timer(TICK_MILLIS) { tick() }
 
     init {
+        val view = TraceView(project, feed) { true }
+        Disposer.register(this, view)
         val shared = listOf(PauseAction(), ClearAction(), LevelGroup())
-        val actions = CommonActionsManager.getInstance()
-        val treeActions = shared + listOf(
-            actions.createExpandAllAction(tree.expander, tree.component),
-            actions.createCollapseAllAction(tree.expander, tree.component),
-        )
-        val splitter = OnePixelSplitter(false, 0.7f).apply {
-            firstComponent = tree.component
-            secondComponent = details.component
-        }
-        addTab("Tree", splitter, treeActions)
+        addTab("Tree", view.component, shared + view.treeActions)
         addTab("Flat", flat.component, shared)
         addTab("Raw", raw.component, shared)
-        timer.start()
+        feed.subscribe(this, object : TraceFeed.Listener {
+            override fun changed(change: Change) = print(change)
+            override fun ticked() = updateStatus()
+        })
     }
 
-    override fun dispose() {
-        timer.stop()
-    }
+    override fun dispose() = Unit
 
     private fun console(): ConsoleView {
         val console = TextConsoleBuilderFactory.getInstance().createBuilder(project).apply { setViewer(true) }.console
@@ -100,17 +85,7 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
         toolWindow.contentManager.addContent(content)
     }
 
-    private fun tick() {
-        if (!paused) {
-            val lines = server.drain(PULL_MAX).mapNotNull(LogLine::parse)
-            if (lines.isNotEmpty()) apply(model.add(lines))
-        }
-        if (++ticks % REFRESH_EVERY_TICKS == 0) tree.refreshRunning()
-        updateStatus()
-    }
-
-    private fun apply(change: Change) {
-        tree.apply(change)
+    private fun print(change: Change) {
         if (change.reset) {
             flat.clear()
             raw.clear()
@@ -119,13 +94,6 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
             flat.print(flatText(line), contentType(line.level))
             raw.print(line.json + "\n", ConsoleViewContentType.NORMAL_OUTPUT)
         }
-    }
-
-    private fun showDetails(line: LogLine?) {
-        details.clear()
-        if (line == null) return
-        details.print(line.prettyJson() + "\n", ConsoleViewContentType.NORMAL_OUTPUT)
-        line.stackTrace?.let { details.print("\n" + it + "\n", ConsoleViewContentType.ERROR_OUTPUT) }
     }
 
     private fun flatText(l: LogLine) = buildString {
@@ -152,7 +120,7 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
             append(" · ${Palette.plural(s.connections, "app")} connected")
             append(" · ${s.received} lines received")
             if (s.dropped > 0) append(" · ${s.dropped} oldest lines discarded")
-            if (paused) append(" · paused")
+            if (feed.paused) append(" · paused")
         }
         statusLines.forEach { it.text = text }
     }
@@ -161,19 +129,16 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
 
     private inner class PauseAction : ToggleAction("Pause", "Stop taking new lines; they wait until resumed", AllIcons.Actions.Pause), DumbAware {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
-        override fun isSelected(e: AnActionEvent) = paused
+        override fun isSelected(e: AnActionEvent) = feed.paused
         override fun setSelected(e: AnActionEvent, state: Boolean) {
-            paused = state
+            feed.paused = state
             updateStatus()
         }
     }
 
     private inner class ClearAction : DumbAwareAction("Clear", "Remove the lines shown so far", AllIcons.Actions.GC) {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
-        override fun actionPerformed(e: AnActionEvent) {
-            apply(model.clear())
-            showDetails(null)
-        }
+        override fun actionPerformed(e: AnActionEvent) = feed.clear()
     }
 
     /** One submenu for all apps and one for each app, each offering the four levels. */
@@ -184,24 +149,16 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
 
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
         override fun getChildren(e: AnActionEvent?): Array<AnAction> =
-            (listOf<String?>(null) + model.apps).map { app ->
+            (listOf<String?>(null) + feed.model.apps).map { app ->
                 DefaultActionGroup(app ?: "All apps", true).apply { Level.entries.forEach { add(LevelAction(app, it)) } }
             }.toTypedArray()
     }
 
     private inner class LevelAction(private val app: String?, private val level: Level) : ToggleAction(level.name), DumbAware {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
-        override fun isSelected(e: AnActionEvent) = model.isLevel(app, level)
+        override fun isSelected(e: AnActionEvent) = feed.model.isLevel(app, level)
         override fun setSelected(e: AnActionEvent, state: Boolean) {
-            if (!state) return
-            model.setLevel(app, level)
-            apply(model.rebuild())
+            if (state) feed.setLevel(app, level)
         }
-    }
-
-    private companion object {
-        const val TICK_MILLIS = 250
-        const val REFRESH_EVERY_TICKS = 2
-        const val PULL_MAX = 2_000
     }
 }

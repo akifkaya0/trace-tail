@@ -15,7 +15,12 @@ Trace Tail tool window, built from the IDE's own components.
 | Flat | Every line in arrival order, as a console; stack trace frames link to the source |
 | Raw | The JSON lines as received |
 
-In the Tree tab, **F4** or **Jump to Source** in the context menu opens the class named by the
+Each Run or Debug window also gets a **Trace Tail** tab once its app's first line arrives. It shows
+the requests that app took part in, with the lines the other apps wrote for them. The app is
+matched by the run configuration's name, which is also `tracetail.app`, so keep `serviceName` as in
+the example below. A run window without tabs, such as a plain Run console, gets no tab.
+
+In the Tree tabs, **F4** or **Jump to Source** in the context menu opens the class named by the
 line's `log.logger`, at `log.origin.file.line` when the layout sends it. The toolbar pauses the
 view (new lines wait in the IDE until resumed), clears it, hides lines below a level for one app or
 all, and expands or collapses the requests.
