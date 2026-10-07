@@ -11,11 +11,13 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.jcef</depends>
+    <depends>com.intellij.java</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow id="Trace Tail"
                     anchor="bottom"
                     icon="/icons/traceTail.svg"
                     factoryClass="io.github.akifkaya0.tracetail.TraceTailToolWindowFactory"/>
+        <java.programPatcher implementation="io.github.akifkaya0.tracetail.TraceTailProgramPatcher"/>
     </extensions>
 </idea-plugin>
