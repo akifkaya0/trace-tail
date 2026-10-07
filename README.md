@@ -15,6 +15,10 @@ Trace Tail tool window, built from the IDE's own components.
 | Flat | Every line in arrival order, as a console; stack trace frames link to the source |
 | Raw | The JSON lines as received |
 
+The Tree's **Timeline** column places each row on its request's own time line, from the request's
+first line to its last: a step as a bar in its app's colour (outlined while it runs, red when its
+END never came), a line inside a step as a diamond.
+
 Each Run or Debug window also gets a **Trace Tail** tab once its app's first line arrives. It shows
 the requests that app took part in, with the lines the other apps wrote for them. The app is
 matched by the run configuration's name, which is also `tracetail.app`, so keep `serviceName` as in

@@ -3,6 +3,7 @@ package io.github.akifkaya0.tracetail.ui
 import com.intellij.ui.JBColor
 import com.intellij.ui.SimpleTextAttributes
 import io.github.akifkaya0.tracetail.model.Level
+import java.awt.Color
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -30,7 +31,19 @@ internal object Palette {
     val START = SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, ACCENT)
     val END = SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, JBColor.GRAY)
 
-    fun app(index: Int) = SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, APPS[index % APPS.size])
+    fun appColor(index: Int): Color = APPS[index % APPS.size]
+
+    fun app(index: Int) = SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, appColor(index))
+
+    fun levelColor(level: Level): Color = when (level) {
+        Level.DEBUG -> DEBUG
+        Level.INFO -> JBColor.foreground()
+        Level.WARN -> WARN
+        Level.ERROR -> ERROR
+    }
+
+    val errorColor: Color get() = ERROR
+    val accentColor: Color get() = ACCENT
 
     fun level(level: Level) = when (level) {
         Level.DEBUG -> SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, DEBUG)

@@ -39,8 +39,18 @@ import javax.swing.tree.TreePath
 
 private typealias Part = Pair<String, SimpleTextAttributes>
 
-/** A row of the tree. A row with a [step] is a START line whose children are the step's lines. */
-internal class LineRow(val trace: Trace, val line: LogLine, val step: Step?, val group: Boolean, val summary: List<Part>)
+/**
+ * A row of the tree. A row with a [step] is a START line whose children are the step's lines. [bar]
+ * places the row on its request's time line.
+ */
+internal class LineRow(
+    val trace: Trace,
+    val line: LogLine,
+    val step: Step?,
+    val group: Boolean,
+    val summary: List<Part>,
+    val bar: Bar?,
+)
 
 /** Stands in for an END line that has not come, or never will. */
 internal class PendingRow(val text: String, val lost: Boolean)
@@ -72,6 +82,11 @@ internal class TraceTree(
             column("Time") { append(Palette.time(it.line.time), Palette.GRAY) },
             column("Level") { append(it.line.level.name, Palette.level(it.line.level)) },
             column("App") { append(it.line.app, Palette.app(model.appIndex(it.line.app))) },
+            object : ColumnInfo<DefaultMutableTreeNode, Any?>("Timeline") {
+                private val renderer = TimelineRenderer()
+                override fun valueOf(item: DefaultMutableTreeNode?): Any? = item?.userObject
+                override fun getRenderer(item: DefaultMutableTreeNode?): TableCellRenderer = renderer
+            },
             TreeColumnInfo("Message"),
         ),
     )
@@ -103,6 +118,7 @@ internal class TraceTree(
         fixWidth(0, 96)
         fixWidth(1, 56)
         fixWidth(2, 140)
+        fixWidth(3, 160)
         table.tree.addTreeExpansionListener(object : TreeExpansionListener {
             override fun treeExpanded(event: TreeExpansionEvent) = remember(event.path, true)
             override fun treeCollapsed(event: TreeExpansionEvent) = remember(event.path, false)
@@ -175,7 +191,7 @@ internal class TraceTree(
         val u = ui[trace.id] ?: return
         val now = System.currentTimeMillis()
         val shape = trace.analyse(now)
-        build(u.node, trace, shape, now)
+        build(u.node, Build(trace, shape, now, TraceWindow(trace, now)))
         treeModel.nodeStructureChanged(u.node)
         restore(u)
         u.wasRunning = shape.running > 0
@@ -183,46 +199,56 @@ internal class TraceTree(
 
     /* ---------- building a request's rows ---------- */
 
-    private fun build(node: DefaultMutableTreeNode, trace: Trace, shape: Trace.Shape, now: Long) {
+    /** What building one request's rows needs. */
+    private class Build(val trace: Trace, val shape: Trace.Shape, val now: Long, val window: TraceWindow)
+
+    private fun build(node: DefaultMutableTreeNode, b: Build) {
         node.removeAllChildren()
-        val main = shape.roots.singleOrNull()?.takeIf { it.startLine != null }
+        val main = b.shape.roots.singleOrNull()?.takeIf { it.startLine != null }
         if (main != null) {
-            node.userObject = LineRow(trace, main.startLine!!, main, true, summary(trace, main, shape, true, now))
-            body(node, main, shape, trace, now)
+            node.userObject = LineRow(b.trace, main.startLine!!, main, true, summary(b, main, true), b.window.step(main, color(main)))
+            body(node, main, b)
         } else {
-            node.userObject = LineRow(trace, trace.lines.first(), null, true, summary(trace, null, shape, true, now))
-            shape.roots.forEach { step(node, it, shape, trace, now) }
+            val first = b.trace.lines.first()
+            val bar = b.window.whole(b.shape.running > 0, Palette.appColor(model.appIndex(first.app)))
+            node.userObject = LineRow(b.trace, first, null, true, summary(b, null, true), bar)
+            b.shape.roots.forEach { step(node, it, b) }
         }
     }
 
-    private fun step(node: DefaultMutableTreeNode, s: Step, shape: Trace.Shape, trace: Trace, now: Long) {
-        val start = s.startLine ?: return body(node, s, shape, trace, now)
-        val child = DefaultMutableTreeNode(LineRow(trace, start, s, false, summary(trace, s, shape, false, now)))
+    private fun step(node: DefaultMutableTreeNode, s: Step, b: Build) {
+        val start = s.startLine ?: return body(node, s, b)
+        val child = DefaultMutableTreeNode(LineRow(b.trace, start, s, false, summary(b, s, false), b.window.step(s, color(s))))
         node.add(child)
-        body(child, s, shape, trace, now)
+        body(child, s, b)
     }
 
-    private fun body(node: DefaultMutableTreeNode, s: Step, shape: Trace.Shape, trace: Trace, now: Long) {
+    private fun body(node: DefaultMutableTreeNode, s: Step, b: Build) {
         val items = ArrayList<Pair<Long, Any>>()
-        shape.kids[s.id]?.forEach { items += it.start to it }
+        b.shape.kids[s.id]?.forEach { items += it.start to it }
         s.notes.forEach { items += it.time to it }
         items.sortBy { it.first }
         for ((_, item) in items) {
             when (item) {
-                is Step -> step(node, item, shape, trace, now)
-                is LogLine -> node.add(DefaultMutableTreeNode(LineRow(trace, item, null, false, emptyList())))
+                is Step -> step(node, item, b)
+                is LogLine -> node.add(DefaultMutableTreeNode(LineRow(b.trace, item, null, false, emptyList(), b.window.mark(item))))
             }
         }
         val end = s.endLine
         when {
-            end != null -> node.add(DefaultMutableTreeNode(LineRow(trace, end, null, false, emptyList())))
+            end != null -> node.add(DefaultMutableTreeNode(LineRow(b.trace, end, null, false, emptyList(), null)))
             s.startLine == null -> Unit
             s.unfinished -> node.add(DefaultMutableTreeNode(PendingRow("END never came", lost = true)))
-            else -> node.add(DefaultMutableTreeNode(PendingRow("running · " + Palette.duration(now - s.start), lost = false)))
+            else -> node.add(DefaultMutableTreeNode(PendingRow("running · " + Palette.duration(b.now - s.start), lost = false)))
         }
     }
 
-    private fun summary(trace: Trace, s: Step?, shape: Trace.Shape, group: Boolean, now: Long): List<Part> {
+    private fun color(s: Step) = Palette.appColor(model.appIndex(s.app ?: ""))
+
+    private fun summary(b: Build, s: Step?, group: Boolean): List<Part> {
+        val trace = b.trace
+        val shape = b.shape
+        val now = b.now
         val parts = ArrayList<Part>()
         parts += Palette.plural(if (group) trace.lines.size else trace.blockCount(s!!, shape), "line") to Palette.GRAY
         if (s != null) {
