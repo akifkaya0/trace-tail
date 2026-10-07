@@ -132,8 +132,10 @@ mesaj vermeden atar.
 ## Çalıştırma
 
 Projeyi IntelliJ IDEA'da açın ve `runIde` Gradle görevini çalıştırın. Eklentinin kurulu olduğu ayrı
-bir deneme (sandbox) IDE'si başlar; görünüm **View → Tool Windows → Trace Tail** altındadır. Bu IDE'de
-bir Java uygulamasını çalıştırdığınızda logları burada görmeye başlarsınız.
+bir deneme (sandbox) IDE'si başlar; görünüm **View → Tool Windows → Trace Tail** altındadır. Deneme
+IDE'si, eklentiyi denemek için hazırlanmış iki küçük uygulamanın bulunduğu `sample` klasörünü açar;
+ayrıntılar için [sample/README.md](sample/README.md) dosyasına bakın. Bu IDE'de bir Java uygulamasını
+çalıştırdığınızda logları burada görmeye başlarsınız.
 
 Agent, `agent` alt projesidir. Derleme, jar dosyasını eklentinin `agent` klasörüne, eklentinin class
 path'inin dışına koyar; böylece agent yalnızca çalıştırılan uygulamanın JVM'ine yüklenir, IDE'ye

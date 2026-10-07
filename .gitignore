@@ -3,5 +3,6 @@
 .kotlin/
 build/
 out/
+target/
 .idea/
 *.iml

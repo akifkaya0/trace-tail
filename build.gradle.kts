@@ -1,3 +1,5 @@
+import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
+
 plugins {
     id("org.jetbrains.kotlin.jvm") version "2.4.20"
     id("org.jetbrains.intellij.platform") version "2.19.0"
@@ -43,8 +45,15 @@ intellijPlatform {
     instrumentCode = false
 }
 
-tasks.prepareSandbox {
+// Every sandbox gets the agent: runIde prepares its own (prepareSandbox_runIde), not prepareSandbox's.
+tasks.withType<PrepareSandboxTask>().configureEach {
     from(agent) {
         into(pluginName.map { "$it/agent" })
     }
+}
+
+tasks.runIde {
+    // The sandbox IDE opens the sample applications, ready to run.
+    val sample = layout.projectDirectory.dir("sample").asFile.absolutePath
+    argumentProviders += CommandLineArgumentProvider { listOf(sample) }
 }
