@@ -1,0 +1,20 @@
+<idea-plugin>
+    <id>io.github.akifkaya0.tracetail</id>
+    <name>Trace Tail</name>
+    <vendor url="https://github.com/akifkaya0">akifkaya0</vendor>
+
+    <description><![CDATA[
+        Live view of the logs written by the applications you run from the IDE.
+        Each request is folded into a single line; opening it shows its log lines
+        nested by trace and span.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="Trace Tail"
+                    anchor="bottom"
+                    icon="/icons/traceTail.svg"
+                    factoryClass="io.github.akifkaya0.tracetail.TraceTailToolWindowFactory"/>
+    </extensions>
+</idea-plugin>
