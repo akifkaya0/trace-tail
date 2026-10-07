@@ -9,7 +9,6 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.MDC;
 import org.slf4j.event.Level;
-import org.slf4j.spi.CallerBoundaryAware;
 import org.slf4j.spi.LoggingEventBuilder;
 
 /**
@@ -186,10 +185,6 @@ public final class Step {
         extra.forEach(line::addKeyValue);
         if (cause != null) {
             line.setCause(cause);
-        }
-        // The line's origin is the code that runs the step, not this class.
-        if (line instanceof CallerBoundaryAware boundary) {
-            boundary.setCallerBoundary(Step.class.getName());
         }
         line.log(message);
     }

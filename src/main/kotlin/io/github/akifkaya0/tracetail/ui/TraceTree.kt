@@ -49,8 +49,8 @@ internal class LineRow(
     val summary: List<Part>,
 )
 
-/** Stands in for an END line that has not come, or never will. */
-internal class PendingRow(val text: String, val lost: Boolean)
+/** Stands in for the END line of the step [span] that has not come, or never will. */
+internal class PendingRow(val span: String?, val text: String, val lost: Boolean)
 
 /** One row of a request's tree; [row] is a [LineRow] or a [PendingRow]. */
 internal class Node(val traceId: String, val row: Any, val depth: Int) {
@@ -269,8 +269,8 @@ internal class TraceTree(
         val last = when {
             end != null -> LineRow(b.trace, end, null, false, emptyList())
             s.startLine == null -> return
-            s.unfinished -> PendingRow("END never came", lost = true)
-            else -> PendingRow("running · " + Palette.duration(b.now - s.start), lost = false)
+            s.unfinished -> PendingRow(s.id, "END never came", lost = true)
+            else -> PendingRow(s.id, "running · " + Palette.duration(b.now - s.start), lost = false)
         }
         node.children += Node(b.trace.id, last, depth)
     }
@@ -280,6 +280,7 @@ internal class TraceTree(
         val shape = b.shape
         val parts = ArrayList<Part>()
         parts += Palette.plural(if (group) trace.lines.size else trace.blockCount(s!!, shape), "line") to Palette.GRAY
+        if (group && trace.dropped > 0) parts += "${trace.dropped} older dropped" to Palette.GRAY
         if (s != null) {
             val end = s.end
             when {
@@ -334,9 +335,10 @@ internal class TraceTree(
         refresh()
     }
 
-    /** Lists the open rows again, keeping the selection on the same line. */
+    /** Lists the open rows again, keeping the selection on the same row. */
     private fun refresh() {
-        val seq = selectedSeq
+        // The table's own selection, not the last one reported: while the mouse button is down, a new selection is not reported yet.
+        val key = visible.getOrNull(table.selectedRow)?.let(::keyOf)
         restoring = true
         try {
             visible.clear()
@@ -346,7 +348,7 @@ internal class TraceTree(
                 if (u.open) addOpen(node)
             }
             tableModel.fireTableDataChanged()
-            val index = if (seq == null) -1 else visible.indexOfFirst { (it.row as? LineRow)?.line?.seq == seq }
+            val index = if (key == null) -1 else visible.indexOfFirst { keyOf(it) == key }
             if (index >= 0) table.selectionModel.setSelectionInterval(index, index)
             fitColumns()
             relayout()
@@ -354,6 +356,13 @@ internal class TraceTree(
             restoring = false
         }
         notifySelection()
+    }
+
+    /** What identifies a row across rebuilds: its request's row, its line, or the step a pending row stands for. */
+    private fun keyOf(node: Node): Any? = when (val r = node.row) {
+        is LineRow -> if (r.group) "request ${node.traceId}" else r.line.seq
+        is PendingRow -> "pending ${node.traceId} ${r.span}"
+        else -> null
     }
 
     private fun addOpen(node: Node) {

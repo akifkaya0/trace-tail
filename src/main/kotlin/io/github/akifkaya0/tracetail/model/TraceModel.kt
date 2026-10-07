@@ -16,6 +16,7 @@ class Change(
  * The received lines and the requests built from them. The level filter applies to the kept lines
  * and the new ones, so changing it rebuilds everything from the kept lines. A request's main step
  * keeps its START and END lines whatever their level, so a request that shows has its main row.
+ * It keeps the last [TRACE_MAX] requests, with at most [TRACE_LINES_MAX] lines in all.
  */
 class TraceModel {
 
@@ -32,6 +33,9 @@ class TraceModel {
     private val held = LinkedHashMap<String, MutableList<LogLine>>()
 
     val traces = LinkedHashMap<String, Trace>()
+
+    /** The lines of [traces], all together. */
+    private var traceLines = 0
 
     /** The apps in the order their first line arrived. */
     val apps: Set<String> get() = appIndex.keys
@@ -70,6 +74,7 @@ class TraceModel {
 
     fun rebuild(): Change {
         traces.clear()
+        traceLines = 0
         skipped.clear()
         held.clear()
         shown.clear()
@@ -80,6 +85,7 @@ class TraceModel {
     fun clear(): Change {
         received.clear()
         traces.clear()
+        traceLines = 0
         skipped.clear()
         held.clear()
         shown.clear()
@@ -130,7 +136,7 @@ class TraceModel {
         val id = line.trace ?: return
         val trace = traces[id]
         if (trace != null) {
-            trace.add(line)
+            addTo(trace, line)
             changed += trace
             return
         }
@@ -146,20 +152,29 @@ class TraceModel {
 
     private fun place(line: LogLine, changed: MutableSet<Trace>, removed: MutableList<Trace>) {
         val id = line.trace ?: return   // a line outside any request shows only in the flat and raw tabs
-        val trace = traces.getOrPut(id) { Trace(id).also { t -> held.remove(id)?.forEach(t::add) } }
-        trace.add(line)
+        val trace = traces.getOrPut(id) { Trace(id).also { t -> held.remove(id)?.forEach { addTo(t, it) } } }
+        addTo(trace, line)
         changed += trace
-        if (traces.size > TRACE_MAX) {
-            val oldest = traces.values.first()
+        // the oldest requests go, but never the one the line went to
+        while (traces.size > TRACE_MAX || traceLines > TRACE_LINES_MAX) {
+            val oldest = traces.values.firstOrNull { it !== trace } ?: break
             traces.remove(oldest.id)
+            traceLines -= oldest.lines.size
             changed -= oldest
             removed += oldest
         }
     }
 
+    private fun addTo(trace: Trace, line: LogLine) {
+        val before = trace.lines.size
+        trace.add(line)
+        traceLines += trace.lines.size - before
+    }
+
     companion object {
         const val KEEP_MAX = 10_000
         const val TRACE_MAX = 300
+        const val TRACE_LINES_MAX = 100_000
         private const val SKIPPED_MAX = 20_000
         private const val HELD_MAX = 2_000
     }

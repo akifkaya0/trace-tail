@@ -105,6 +105,19 @@ class TraceModelTest {
     }
 
     @Test
+    fun dropsTheOldestRequestsPastTheLinesOfAllRequests() {
+        fun lines(request: String, count: Int) = (1..count).map { line("""{"message":"m","trace.id":"$request","span.id":"s"}""") }
+        // 1 + 20 × 4,999 = 99,981 lines
+        model.add(lines("r1", 1))
+        for (r in 2..21) model.add(lines("r$r", 4_999))
+        val change = model.add(lines("r1", 20))
+        // r1 is the oldest, but the lines went to it
+        assertEquals(listOf("r2"), change.removed.map { it.id })
+        assertEquals(listOf("r1", "r3"), model.traces.keys.take(2))
+        assertEquals(TraceModel.TRACE_LINES_MAX + 1 - 4_999, model.traces.values.sumOf { it.lines.size })
+    }
+
+    @Test
     fun forgetsEverythingOnClear() {
         model.add(lines("order"))
         val change = model.clear()

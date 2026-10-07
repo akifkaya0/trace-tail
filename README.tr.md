@@ -21,7 +21,7 @@ nerede hata verdiğini tek bakışta görebilirsiniz.
   tıklamak diğerlerini soluklaştırır
 - **Her Run ve Debug penceresinde bir Trace Tail sekmesi**: yalnızca o uygulamanın katıldığı
   istekleri gösterir
-- **Jump to Source**: bir log satırından onu yazan sınıfa ve satıra gider
+- **Jump to Source**: bir log satırından onu yazan sınıfa gider
 - **Uygulamada değişiklik gerekmez**: bir Java agent çalışma anında kendini Logback'e ya da
   Log4j2'ye ekler
 
@@ -54,9 +54,9 @@ Her istek bir satırdır: önce isteğin ilk satırı, ardından kaç satırı o
 açıldığında isteğin adımları, her biri onu başlatan adımın altında olacak şekilde görünür. Bir satır
 oku, çift tıklama ya da Sol ve Sağ tuşlarıyla katlanır/açılır.
 
-**F4** ya da bağlam menüsündeki **Jump to Source**, satırı yazan sınıfı (`log.logger`) açar;
-satırda `log.origin.file.line` varsa doğrudan o satıra gider. Log4j2'nin asenkron logger'ları satır
-numarası göndermediği için bu durumda yalnızca sınıf açılır.
+**F4** ya da bağlam menüsündeki **Jump to Source**, satırı yazan sınıfı (`log.logger`) açar.
+Agent satır numarası göndermez: bunu bulmak her log çağrısında thread'in stack'ini gezmeyi
+gerektirir ve her çağrıyı 8 ila 30 kat yavaşlatır.
 
 ### Sequence
 
@@ -165,6 +165,12 @@ gösterir. Diğer tüm alanlar `anahtar=değer` olarak gösterilir.
 
 Eklenti son 10.000 satırı bellekte tutar; böylece seviye filtresi değiştirildiğinde yeni filtre
 yalnızca yeni gelen satırlara değil, bu satırlara da uygulanır.
+
+Tree son 300 isteği, toplamda en fazla 100.000 satırla tutar. Bir istek en fazla 5.000 satır
+tutar; bunu geçince en eski satırlarını onda birlik parçalar halinde atar. Önce adımların içindeki
+satırlar atılır, en yeni 500 satır hariç; böylece her adım `START` ve `END` satırlarını korur. Bu
+yetmezse en eski bitmiş adımlar atılır. İsteğin satırı bundan sonra kaç satır atıldığını gösterir;
+`WARN` ve `ERROR` sayıları atılan satırları da içerir.
 
 Bir uygulamanın loglaması hiçbir zaman IDE'yi beklemez; IDE yavaşlasa ya da kapansa bile uygulama
 yavaşlamaz. Agent kendi thread'inden gönderir ve en fazla 10.000 gönderilmemiş satır tutar; eklenti

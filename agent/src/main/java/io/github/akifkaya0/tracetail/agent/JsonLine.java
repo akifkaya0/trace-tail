@@ -9,7 +9,11 @@ final class JsonLine {
 
     private final StringBuilder sb = new StringBuilder(256).append('{');
 
-    /** The fields every event has, in the order the ECS layout writes them. */
+    /**
+     * The fields every event has, in the order the ECS layout writes them. The ECS {@code log.origin}
+     * fields are left out: finding where an event was written walks the thread's stack, which makes
+     * each log call 8 to 30 times slower.
+     */
     JsonLine(long millis, String level, String message, String thread, String logger) {
         add("@timestamp", Instant.ofEpochMilli(millis).toString());
         add("log.level", level);
@@ -17,17 +21,6 @@ final class JsonLine {
         add("service.name", TraceTailAgent.app);
         add("process.thread.name", thread);
         add("log.logger", logger);
-    }
-
-    JsonLine origin(StackTraceElement source) {
-        if (source != null) {
-            add("log.origin.file.name", source.getFileName());
-            add("log.origin.function", source.getMethodName());
-            if (source.getLineNumber() > 0) {
-                key("log.origin.file.line").append(source.getLineNumber());
-            }
-        }
-        return this;
     }
 
     JsonLine error(String type, String message, String stackTrace) {

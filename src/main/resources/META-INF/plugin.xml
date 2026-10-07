@@ -23,7 +23,7 @@
             <li><b>Raw</b>: the JSON lines as the agent sent them</li>
             <li>A <b>Trace Tail</b> tab in each Run and Debug window, showing only the requests that app
                 took part in</li>
-            <li><b>Jump to Source</b> (F4) from a log line to the class and line that wrote it</li>
+            <li><b>Jump to Source</b> (F4) from a log line to the class that wrote it</li>
             <li>A level filter per app, pause, Scroll to the End and Soft-Wrap</li>
         </ul>
         <p><img src="https://raw.githubusercontent.com/akifkaya0/trace-tail/main/docs/images/flat.png"

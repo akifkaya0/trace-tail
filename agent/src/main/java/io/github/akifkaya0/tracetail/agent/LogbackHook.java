@@ -132,14 +132,13 @@ public final class LogbackHook extends ContextAwareBase implements StatusListene
         }
 
         private static String format(ILoggingEvent event) {
-            StackTraceElement[] caller = event.getCallerData();
             JsonLine line = new JsonLine(
                 event.getTimeStamp(),
                 event.getLevel().toString(),
                 event.getFormattedMessage(),
                 event.getThreadName(),
                 event.getLoggerName()
-            ).origin(caller != null && caller.length > 0 ? caller[0] : null);
+            );
             for (Map.Entry<String, String> e : event.getMDCPropertyMap().entrySet()) {
                 line.add(e.getKey(), e.getValue());
             }

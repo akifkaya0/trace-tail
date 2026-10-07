@@ -103,7 +103,7 @@ public final class Log4jHook implements ContextDataProvider {
                 entries != null ? str(entries.get("message")) : message.getFormattedMessage(),
                 event.getThreadName(),
                 event.getLoggerName()
-            ).origin(event.getSource());
+            );
             for (Map.Entry<String, String> e : event.getContextData().toMap().entrySet()) {
                 line.add(e.getKey(), e.getValue());
             }

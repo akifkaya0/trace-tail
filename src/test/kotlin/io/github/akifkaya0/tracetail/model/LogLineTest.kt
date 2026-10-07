@@ -15,7 +15,7 @@ class LogLineTest {
         val line = line(
             """{"@timestamp":"2026-10-07T10:00:00.250Z","log.level":"WARN","message":"Ended with FAILURE","service.name":"stock",""" +
                 """"trace.id":"t-1","span.id":"s-2","parent.id":"s-1","user.id":"u-7","event.action":"METHOD","phase":"END",""" +
-                """"log.logger":"sample.stock.Warehouse","log.origin.file.line":42,""" +
+                """"log.logger":"sample.stock.Warehouse",""" +
                 """"error.stack_trace":"java.lang.IllegalStateException: boom\n\tat sample.stock.Warehouse.take(Warehouse.java:42)"}""",
         )
         assertEquals(at("10:00:00.250"), line.time)
@@ -29,7 +29,6 @@ class LogLineTest {
         assertEquals("METHOD", line.event)
         assertEquals(Phase.END, line.phase)
         assertEquals("sample.stock.Warehouse", line.logger)
-        assertEquals(42, line.originLine)
         assertEquals("java.lang.IllegalStateException: boom\n\tat sample.stock.Warehouse.take(Warehouse.java:42)", line.stackTrace)
         assertEquals(emptyMap<String, String>(), line.fields)
     }

@@ -1,6 +1,7 @@
 package io.github.akifkaya0.tracetail.model
 
 import io.github.akifkaya0.tracetail.model.Requests.at
+import io.github.akifkaya0.tracetail.model.Requests.line
 import io.github.akifkaya0.tracetail.model.Requests.lines
 import io.github.akifkaya0.tracetail.model.Requests.trace
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -91,6 +92,78 @@ class TraceTest {
         assertEquals(0, shape.unfinished)
         assertEquals(3, shape.running)
     }
+
+    @Test
+    fun dropsTheOldestLinesInsideTheStepsFirst() {
+        val trace = Trace("job")
+        trace.add(line("""{"message":"Started","trace.id":"job","span.id":"j1","event.action":"SCHEDULED","phase":"START"}"""))
+        repeat(Trace.LINES_MAX) { trace.add(line("""{"message":"rate $it","log.level":"WARN","trace.id":"job","span.id":"j1"}""")) }
+        // a tenth goes at once, so the next lines do not trim again
+        val kept = Trace.LINES_MAX - Trace.LINES_MAX / 10
+        assertEquals(kept, trace.lines.size)
+        assertEquals(Trace.LINES_MAX + 1 - kept, trace.dropped)
+        assertEquals("Started", trace.lines.first().message)
+        assertEquals("rate ${Trace.LINES_MAX - kept + 1}", trace.lines[1].message)
+        val notes = trace.steps.getValue("j1").notes
+        assertEquals(kept - 1, notes.size)
+        assertEquals(trace.lines[1], notes.first())
+        // the counts keep the dropped lines
+        assertEquals(Trace.LINES_MAX, trace.count(Level.WARN))
+    }
+
+    @Test
+    fun dropsTheOldestFinishedStepsOfARequestOfStepsAlone() {
+        val trace = jobOfSteps(2_500)
+        // 5,001 lines are 501 too many: 251 steps go, START and END together
+        assertEquals(502, trace.dropped)
+        assertEquals(4_499, trace.lines.size)
+        // the main step, which the others hang under, stays
+        assertEquals(listOf("j0", "j252"), trace.steps.keys.take(2))
+        assertEquals(trace.lines.size, trace.steps.size * 2 - 1)
+    }
+
+    @Test
+    fun keepsTheNewestLinesInsideTheSteps() {
+        val trace = jobOfSteps(2_499)
+        trace.add(line("""{"message":"No rate","log.level":"WARN","trace.id":"job","span.id":"j0"}"""))
+        trace.add(methodLine(2_500, "START"))
+        // the warning is the only line inside a step, but it is new: 251 old steps go instead
+        assertEquals("No rate", trace.steps.getValue("j0").notes.single().message)
+        assertEquals(502, trace.dropped)
+    }
+
+    @Test
+    fun keepsAStepThatHoldsOneOfTheNewestLines() {
+        val trace = jobOfSteps(2_499)
+        // a line of the oldest step comes late, after the step ended
+        trace.add(line("""{"message":"Late","trace.id":"job","span.id":"j1"}"""))
+        trace.add(methodLine(2_500, "START"))
+        assertEquals("Late", trace.steps.getValue("j1").notes.single().message)
+        assertEquals(listOf("j0", "j1", "j253"), trace.steps.keys.take(3))
+    }
+
+    @Test
+    fun dropsAStepLeftWithNoLine() {
+        val trace = Trace("r")
+        trace.add(line("""{"message":"Started","trace.id":"r","span.id":"a1","event.action":"HTTP_IN","phase":"START"}"""))
+        trace.add(line("""{"message":"outside any step","trace.id":"r"}"""))
+        repeat(Trace.LINES_MAX - 1) { trace.add(line("""{"message":"n $it","trace.id":"r","span.id":"a1"}""")) }
+        // the line outside any step was the oldest to go, and the step that held it went with it
+        assertEquals(listOf("a1"), trace.steps.keys.toList())
+        assertEquals(listOf("a1"), trace.analyse(0).roots.map { it.id })
+    }
+
+    /** A job whose main step `j0` runs [count] finished method steps, `j1` on. */
+    private fun jobOfSteps(count: Int) = Trace("job").also { trace ->
+        trace.add(line("""{"message":"Started","trace.id":"job","span.id":"j0","event.action":"SCHEDULED","phase":"START"}"""))
+        for (i in 1..count) {
+            trace.add(methodLine(i, "START"))
+            trace.add(methodLine(i, "END"))
+        }
+    }
+
+    private fun methodLine(i: Int, phase: String) =
+        line("""{"message":"m","trace.id":"job","span.id":"j$i","parent.id":"j0","event.action":"METHOD","phase":"$phase"}""")
 
     private fun Trace.Shape.kids(id: String) = kids[id].orEmpty().map { it.id }
 }

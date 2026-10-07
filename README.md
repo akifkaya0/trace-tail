@@ -18,7 +18,7 @@ you can see at a glance which steps it took, which step started which, and where
   which can be copied as Mermaid
 - **A console of every line**, coloured per request; clicking a request's id fades the others out
 - **A Trace Tail tab in each Run and Debug window**, showing only the requests that app took part in
-- **Jump to Source** from a log line to the class and line that wrote it
+- **Jump to Source** from a log line to the class that wrote it
 - **No change to the application**: a Java agent adds itself to Logback or Log4j2 at run time
 
 ## Installation
@@ -50,8 +50,8 @@ row shows the request's steps, each under the step that started it. A row folds 
 double click, or the Left and Right keys.
 
 **F4** or **Jump to Source** in the context menu opens the class that wrote the line
-(`log.logger`), going straight to `log.origin.file.line` when the line has it. Log4j2's
-asynchronous loggers send no line number, so for them only the class opens.
+(`log.logger`). The agent sends no line number: finding it walks the thread's stack on every log
+call, which makes each call 8 to 30 times slower.
 
 ### Sequence
 
@@ -159,6 +159,12 @@ Every other field is shown as `key=value`.
 
 The plugin keeps the last 10,000 lines in memory, so a changed level filter applies not only to new
 lines but to those too.
+
+The Tree keeps the last 300 requests, with at most 100,000 lines in all. A request keeps at most
+5,000 lines; past that, it drops its oldest lines, a tenth at a time. The lines inside its steps go
+first, except the newest 500, so every step keeps its `START` and `END` lines. When that is not
+enough, its oldest finished steps go. Its row then shows how many lines it dropped, and its `WARN`
+and `ERROR` counts still include them.
 
 An application's logging never waits on the IDE; the application does not slow down even if the
 IDE does, or closes. The agent sends from its own thread and keeps at most 10,000 unsent lines; the

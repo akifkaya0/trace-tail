@@ -41,7 +41,6 @@ class LogLine(
     /** The fields without a place of their own, in the order the app wrote them. */
     val fields: Map<String, String>,
     val logger: String?,
-    val originLine: Int?,
     val stackTrace: String?,
     val json: String,
 ) {
@@ -54,7 +53,7 @@ class LogLine(
 
     /** The same line hung under another step, because the step it names is hidden by the level filter. */
     fun placed(span: String?, parent: String?) = LogLine(
-        seq, time, level, app, trace, span, parent, event, phase, user, message, fields, logger, originLine, stackTrace, json,
+        seq, time, level, app, trace, span, parent, event, phase, user, message, fields, logger, stackTrace, json,
     )
 
     /** The JSON, indented, without the stack trace, which is shown on its own. */
@@ -68,7 +67,7 @@ class LogLine(
         private const val STACK_TRACE = "error.stack_trace"
         private val OWN_FIELDS = setOf(
             "@timestamp", "log.level", "message", "ecs.version", "service.name", "event.dataset", "host.name",
-            "process.thread.name", "log.logger", "log.origin.file.name", "log.origin.file.line", "log.origin.function",
+            "process.thread.name", "log.logger",
             "trace.id", "span.id", "parent.id", "traceId", "spanId", "event.action", "phase", "flow", "user.id",
             STACK_TRACE,
         )
@@ -109,7 +108,6 @@ class LogLine(
                 message = str("message") ?: "",
                 fields = fields,
                 logger = str("log.logger"),
-                originLine = str("log.origin.file.line")?.toIntOrNull(),
                 stackTrace = str(STACK_TRACE),
                 json = text,
             )

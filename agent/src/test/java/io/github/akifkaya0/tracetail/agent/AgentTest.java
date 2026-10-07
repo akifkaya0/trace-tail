@@ -52,11 +52,10 @@ class AgentTest {
 
     @ParameterizedTest
     @MethodSource("setups")
-    void sendsWhereTheLineWasWritten(String setup) {
+    void leavesOutWhereTheLineWasWritten(String setup) {
+        // finding it would make each log call 8 to 30 times slower
         Map<String, String> line = run(setup).line("first line");
-        assertEquals(app(setup).substring(app(setup).lastIndexOf('.') + 1) + ".java", line.get("log.origin.file.name"));
-        assertEquals("main", line.get("log.origin.function"));
-        assertTrue(Integer.parseInt(line.get("log.origin.file.line")) > 0);
+        assertFalse(line.keySet().stream().anyMatch(key -> key.startsWith("log.origin.")), line.toString());
     }
 
     @ParameterizedTest
