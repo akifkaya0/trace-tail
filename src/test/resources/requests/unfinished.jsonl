@@ -1,0 +1,6 @@
+{"@timestamp":"2026-10-07T10:00:00.000Z","log.level":"INFO","message":"Started","service.name":"shop","trace.id":"unfinished","span.id":"u1","event.action":"HTTP_IN","phase":"START","route":"/order"}
+{"@timestamp":"2026-10-07T10:00:00.010Z","log.level":"INFO","message":"Started","service.name":"shop","trace.id":"unfinished","span.id":"u2","event.action":"METHOD","phase":"START","parent.id":"u1","method":"OrderService.place"}
+{"@timestamp":"2026-10-07T10:00:00.020Z","log.level":"INFO","message":"Started","service.name":"shop","trace.id":"unfinished","span.id":"u3","event.action":"MQ_OUT","phase":"START","parent.id":"u1","queue":"shipping"}
+{"@timestamp":"2026-10-07T10:00:00.025Z","log.level":"INFO","message":"Finished","service.name":"shop","trace.id":"unfinished","span.id":"u3","event.action":"MQ_OUT","phase":"END","parent.id":"u1","queue":"shipping","outcome":"SUCCESS","durationMs":"5"}
+{"@timestamp":"2026-10-07T10:00:00.030Z","log.level":"INFO","message":"Started","service.name":"stock","traceId":"unfinished","spanId":"u4","event.action":"MQ_IN","phase":"START","parent.id":"u3","queue":"shipping"}
+{"@timestamp":"2026-10-07T10:00:00.100Z","log.level":"INFO","message":"Finished","service.name":"shop","trace.id":"unfinished","span.id":"u1","event.action":"HTTP_IN","phase":"END","route":"/order","status":"200","outcome":"SUCCESS","durationMs":"100"}

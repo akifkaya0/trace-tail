@@ -1,0 +1,9 @@
+{"@timestamp":"2026-10-07T10:00:00.000Z","log.level":"INFO","message":"Started","service.name":"shop","trace.id":"levels","span.id":"s1","event.action":"HTTP_IN","phase":"START","route":"/order"}
+{"@timestamp":"2026-10-07T10:00:00.001Z","log.level":"DEBUG","message":"Started","service.name":"shop","trace.id":"levels","span.id":"s2","event.action":"METHOD","phase":"START","parent.id":"s1","method":"OrderService.place"}
+{"@timestamp":"2026-10-07T10:00:00.002Z","log.level":"INFO","message":"Checked the stock","service.name":"shop","trace.id":"levels","span.id":"s2"}
+{"@timestamp":"2026-10-07T10:00:00.003Z","log.level":"DEBUG","message":"Started","service.name":"shop","trace.id":"levels","span.id":"s3","event.action":"METHOD","phase":"START","parent.id":"s2","method":"Catalog.price"}
+{"@timestamp":"2026-10-07T10:00:00.004Z","log.level":"WARN","message":"No price, using the list price","service.name":"shop","trace.id":"levels","span.id":"s3"}
+{"@timestamp":"2026-10-07T10:00:00.005Z","log.level":"DEBUG","message":"Finished","service.name":"shop","trace.id":"levels","span.id":"s3","event.action":"METHOD","phase":"END","parent.id":"s2","method":"Catalog.price","outcome":"SUCCESS","durationMs":"2"}
+{"@timestamp":"2026-10-07T10:00:00.006Z","log.level":"DEBUG","message":"Finished","service.name":"shop","trace.id":"levels","span.id":"s2","event.action":"METHOD","phase":"END","parent.id":"s1","method":"OrderService.place","outcome":"SUCCESS","durationMs":"5"}
+{"@timestamp":"2026-10-07T10:00:00.007Z","log.level":"INFO","message":"Finished","service.name":"shop","trace.id":"levels","span.id":"s1","event.action":"HTTP_IN","phase":"END","route":"/order","status":"200","outcome":"SUCCESS","durationMs":"7"}
+{"@timestamp":"2026-10-07T10:00:00.008Z","log.level":"INFO","message":"Refreshed the catalog","service.name":"shop"}

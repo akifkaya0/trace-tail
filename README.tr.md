@@ -191,6 +191,11 @@ Agent, `agent` alt projesidir. Derleme, jar dosyasını eklentinin `agent` klas�
 path'inin dışına koyar; böylece agent yalnızca çalıştırılan uygulamanın JVM'ine yüklenir, IDE'ye
 yüklenmez.
 
+Eklentinin testleri, kök projenin `test` görevidir. `src/test/resources/requests` altındaki
+istekler, agent'ın satırlarını gönderdiği biçimde yazılmıştır. Testler bunları görünümün modeline
+okur; adımları, seviye filtresini ve Sequence sekmesinin Mermaid metnini kontrol eder. Bir başka test
+de eklentinin portuna soketlerle satır gönderir.
+
 Agent'ın testleri, `agent` alt projesinin `test` görevidir. Her test, küçük bir uygulamayı
 [Uygulamanın ihtiyaç duyduğu](#uygulamanın-ihtiyaç-duyduğu) bölümündeki log kurulumlarından biriyle,
 agent'la kendi JVM'inde başlatır ve portuna gelen satırları kontrol eder.

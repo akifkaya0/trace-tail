@@ -26,6 +26,9 @@ val agent = configurations.create("agent") {
 
 dependencies {
     agent(project(":agent"))
+    testImplementation(platform("org.junit:junit-bom:5.13.4"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     intellijPlatform {
         local(providers.gradleProperty("platformLocalPath"))
         // Java run configurations, which receive the receiver's port, and Java classes, which logs point to.
@@ -50,6 +53,10 @@ tasks.withType<PrepareSandboxTask>().configureEach {
     from(agent) {
         into(pluginName.map { "$it/agent" })
     }
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.runIde {

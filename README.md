@@ -184,6 +184,11 @@ The agent is the `agent` subproject. The build puts its jar in the plugin's `age
 the plugin's class path, so the agent is loaded only into the JVM of the application being run, not
 into the IDE.
 
+The plugin's tests are the root project's `test` task. The requests in `src/test/resources/requests`
+are written as the agent sends their lines. The tests read them into the view's model and check the
+steps, the level filter and the Sequence tab's Mermaid text. Another test sends lines to the
+plugin's port over sockets.
+
 The agent's tests are the `agent` subproject's `test` task. Each test starts a small application in
 its own JVM with the agent, on one of the logging setups in
 [What the application needs](#what-the-application-needs), and checks the lines that reach its port.
