@@ -10,7 +10,6 @@ import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.project.Project
 import com.intellij.ui.PopupHandler
 import com.intellij.ui.ScrollPaneFactory
-import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -21,6 +20,7 @@ import io.github.akifkaya0.tracetail.model.Step
 import io.github.akifkaya0.tracetail.model.Trace
 import io.github.akifkaya0.tracetail.model.TraceModel
 import java.awt.BorderLayout
+import java.awt.Rectangle
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
@@ -40,17 +40,13 @@ import javax.swing.event.TableColumnModelEvent
 import javax.swing.event.TableColumnModelListener
 import javax.swing.table.AbstractTableModel
 
-/**
- * A row of the tree. A row with a [step] is a START line whose children are the step's lines. [bar]
- * places the row on its request's time line.
- */
+/** A row of the tree. A row with a [step] is a START line whose children are the step's lines. */
 internal class LineRow(
     val trace: Trace,
     val line: LogLine,
     val step: Step?,
     val group: Boolean,
     val summary: List<Part>,
-    val bar: Bar?,
 )
 
 /** Stands in for an END line that has not come, or never will. */
@@ -95,6 +91,15 @@ internal class TraceTree(
     private val table = object : JBTable(tableModel) {
         // Unwrapped lines keep their length and the table scrolls sideways; wrapped ones fit the width.
         override fun getScrollableTracksViewportWidth() = wrap || preferredSize.width < (parent?.width ?: 0)
+
+        // A selected row comes into view up or down only; the wide Message cell would pull the view sideways.
+        override fun changeSelection(row: Int, column: Int, toggle: Boolean, extend: Boolean) {
+            val scrolls = autoscrolls
+            autoscrolls = false
+            super.changeSelection(row, column, toggle, extend)
+            autoscrolls = scrolls
+            if (scrolls) scrollToRow(row)
+        }
     }
     private val scroll: JScrollPane = ScrollPaneFactory.createScrollPane(table)
     private val message = TextCell(table) { configureMessage(it as? Node) }
@@ -126,18 +131,15 @@ internal class TraceTree(
         table.selectionModel.selectionMode = ListSelectionModel.SINGLE_SELECTION
         table.rowHeight = message.rowHeight
         table.tableHeader.reorderingAllowed = false
+        table.tableHeader.resizingAllowed = false
         val columns = table.columnModel
         columns.getColumn(TIME).cellRenderer = TextCell(table) { v -> parts = lineOf(v)?.let { listOf(Palette.time(it.time) to Palette.GRAY) }.orEmpty() }
         columns.getColumn(LEVEL).cellRenderer = TextCell(table) { v -> parts = lineOf(v)?.let { listOf(it.level.name to Palette.level(it.level)) }.orEmpty() }
         columns.getColumn(APP).cellRenderer = TextCell(table) { v ->
             parts = lineOf(v)?.let { listOf(it.app to Palette.app(model.appIndex(it.app))) }.orEmpty()
         }
-        columns.getColumn(TIMELINE).cellRenderer = TimelineRenderer { message.rowHeight }
         columns.getColumn(MESSAGE).cellRenderer = message
-        fixWidth(TIME, 96)
-        fixWidth(LEVEL, 56)
-        fixWidth(APP, 140)
-        fixWidth(TIMELINE, 160)
+        fitColumns()
         columns.addColumnModelListener(object : TableColumnModelListener {
             override fun columnMarginChanged(e: ChangeEvent) = scheduleRelayout()
             override fun columnAdded(e: TableColumnModelEvent) = Unit
@@ -171,6 +173,14 @@ internal class TraceTree(
     }
 
     fun selectedLine(): LogLine? = (visible.getOrNull(table.selectedRow)?.row as? LineRow)?.line
+
+    /** Whether the newest rows are in view; new rows then keep them in view. */
+    fun atBottom(): Boolean {
+        val bar = scroll.verticalScrollBar
+        return bar.value + bar.visibleAmount >= bar.maximum - JBUI.scale(8)
+    }
+
+    fun scrollToBottom() = scrollToRow(visible.lastIndex)
 
     fun setWrap(on: Boolean) {
         if (wrap == on) return
@@ -214,25 +224,23 @@ internal class TraceTree(
         val u = ui[trace.id] ?: return
         val now = System.currentTimeMillis()
         val shape = trace.analyse(now)
-        u.node = build(Build(trace, shape, now, TraceWindow(trace, now)))
+        u.node = build(Build(trace, shape, now))
         u.wasRunning = shape.running > 0
     }
 
     /* ---------- building a request's rows ---------- */
 
     /** What building one request's rows needs. */
-    private class Build(val trace: Trace, val shape: Trace.Shape, val now: Long, val window: TraceWindow)
+    private class Build(val trace: Trace, val shape: Trace.Shape, val now: Long)
 
     private fun build(b: Build): Node {
         val main = b.shape.roots.singleOrNull()?.takeIf { it.startLine != null }
         return if (main != null) {
-            Node(b.trace.id, LineRow(b.trace, main.startLine!!, main, true, summary(b, main, true), b.window.step(main, color(main))), 0).also {
+            Node(b.trace.id, LineRow(b.trace, main.startLine!!, main, true, summary(b, main, true)), 0).also {
                 body(it, main, b)
             }
         } else {
-            val first = b.trace.lines.first()
-            val bar = b.window.whole(b.shape.running > 0, Palette.appColor(model.appIndex(first.app)))
-            Node(b.trace.id, LineRow(b.trace, first, null, true, summary(b, null, true), bar), 0).also { node ->
+            Node(b.trace.id, LineRow(b.trace, b.trace.lines.first(), null, true, summary(b, null, true)), 0).also { node ->
                 b.shape.roots.forEach { step(node, it, b) }
             }
         }
@@ -240,7 +248,7 @@ internal class TraceTree(
 
     private fun step(parent: Node, s: Step, b: Build) {
         val start = s.startLine ?: return body(parent, s, b)
-        val child = Node(b.trace.id, LineRow(b.trace, start, s, false, summary(b, s, false), b.window.step(s, color(s))), parent.depth + 1)
+        val child = Node(b.trace.id, LineRow(b.trace, start, s, false, summary(b, s, false)), parent.depth + 1)
         parent.children += child
         body(child, s, b)
     }
@@ -254,20 +262,18 @@ internal class TraceTree(
         for ((_, item) in items) {
             when (item) {
                 is Step -> step(node, item, b)
-                is LogLine -> node.children += Node(b.trace.id, LineRow(b.trace, item, null, false, emptyList(), b.window.mark(item)), depth)
+                is LogLine -> node.children += Node(b.trace.id, LineRow(b.trace, item, null, false, emptyList()), depth)
             }
         }
         val end = s.endLine
         val last = when {
-            end != null -> LineRow(b.trace, end, null, false, emptyList(), null)
+            end != null -> LineRow(b.trace, end, null, false, emptyList())
             s.startLine == null -> return
             s.unfinished -> PendingRow("END never came", lost = true)
             else -> PendingRow("running · " + Palette.duration(b.now - s.start), lost = false)
         }
         node.children += Node(b.trace.id, last, depth)
     }
-
-    private fun color(s: Step) = Palette.appColor(model.appIndex(s.app ?: ""))
 
     private fun summary(b: Build, s: Step?, group: Boolean): List<Part> {
         val trace = b.trace
@@ -342,6 +348,7 @@ internal class TraceTree(
             tableModel.fireTableDataChanged()
             val index = if (seq == null) -1 else visible.indexOfFirst { (it.row as? LineRow)?.line?.seq == seq }
             if (index >= 0) table.selectionModel.setSelectionInterval(index, index)
+            fitColumns()
             relayout()
         } finally {
             restoring = false
@@ -469,33 +476,44 @@ internal class TraceTree(
     private fun select(i: Int) {
         if (i !in visible.indices) return
         table.selectionModel.setSelectionInterval(i, i)
-        table.scrollRectToVisible(table.getCellRect(i, 0, true))
+        scrollToRow(i)
     }
 
-    private fun atBottom(): Boolean {
-        val bar = scroll.verticalScrollBar
-        return bar.value + bar.visibleAmount >= bar.maximum - JBUI.scale(8)
+    /** Brings a row into view without scrolling sideways. */
+    private fun scrollToRow(i: Int) {
+        if (i !in visible.indices) return
+        val cell = table.getCellRect(i, 0, true)
+        val view = table.visibleRect
+        table.scrollRectToVisible(Rectangle(view.x, cell.y, maxOf(view.width, 1), cell.height))
     }
 
-    private fun scrollToBottom() {
-        val last = table.rowCount - 1
-        if (last >= 0) table.scrollRectToVisible(table.getCellRect(last, 0, true))
+    /* ---------- column widths ---------- */
+
+    /** Sizes the Time, Level and App columns to their title and their widest text; the Message column takes the rest. */
+    private fun fitColumns() {
+        fitColumn(TIME, listOf(Palette.time(0) to Palette.GRAY))
+        fitColumn(LEVEL, Level.entries.map { it.name to Palette.level(it) })
+        fitColumn(APP, model.apps.map { it to Palette.app(model.appIndex(it)) })
     }
 
-    private fun fixWidth(index: Int, width: Int) {
+    private fun fitColumn(index: Int, texts: List<Part>) {
         val column = table.columnModel.getColumn(index)
-        column.preferredWidth = JBUI.scale(width)
-        column.minWidth = JBUI.scale(width)
-        column.maxWidth = JBUI.scale(width)
+        val title = table.tableHeader.defaultRenderer.getTableCellRendererComponent(table, COLUMNS[index], false, false, -1, index)
+        val width = maxOf(message.widthOf(texts), title.preferredSize.width)
+        if (column.minWidth == width && column.maxWidth == width) return
+        column.minWidth = 0
+        column.maxWidth = Int.MAX_VALUE
+        column.preferredWidth = width
+        column.minWidth = width
+        column.maxWidth = width
     }
 
     private companion object {
-        val COLUMNS = arrayOf("Time", "Level", "App", "Timeline", "Message")
+        val COLUMNS = arrayOf("Time", "Level", "App", "Message")
         const val TIME = 0
         const val LEVEL = 1
         const val APP = 2
-        const val TIMELINE = 3
-        const val MESSAGE = 4
+        const val MESSAGE = 3
         val HIDDEN_FIELDS = setOf("startTime")
     }
 }

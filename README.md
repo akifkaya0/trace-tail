@@ -21,9 +21,10 @@ The tool window has three tabs that look at the same logs from three angles:
 | Flat | Every line in arrival order, as a console; stack trace frames link to the source |
 | Raw | The JSON lines as received; useful to see exactly what the agent sent |
 
-The Tree's **Timeline** column places each row on its request's own time line, from the request's
-first line to its last. It shows where a request's time went: a step as a bar in its app's colour
-(outlined while it runs, red when its END never came), a line inside a step as a diamond.
+The **Flat** tab colours each line like the Tree, and gives warnings and errors, with their stack
+traces, a tinted background. After its time and level, each line shows the first eight characters
+of its request's id, in a colour of the request's own. Clicking that id focuses the request: the
+lines of the other requests fade, until the id is clicked again.
 
 The **Sequence** diagram draws the selected request as a flow of who called whom. It has a lifeline
 for each app, for each class whose methods log `METHOD` steps (kept next to its app), and for the
@@ -46,7 +47,11 @@ The toolbar's buttons:
 
 - pause the view; new lines are not lost but wait in the IDE until resumed
 - clear the view
-- hide lines below a level for one app or all (for example, only `WARN` and above)
+- hide lines below a level for one app or all (for example, only `WARN` and above). A request's main
+  step, the one no other step started, keeps its `START` and `END` lines, so a request that still
+  shows keeps its first row.
+- **Scroll to the End**: show the newest lines. A view scrolled to its end keeps following new
+  lines; scrolling up stops it, so the lines being read stay in place.
 - expand or collapse all requests
 - turn **Soft-Wrap** on or off: wrapped, long lines continue on the next line in the tree and the
   consoles; unwrapped, each stays on one line and the view scrolls sideways. The IDE remembers the

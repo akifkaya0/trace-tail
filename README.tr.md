@@ -22,10 +22,11 @@ Araç penceresinde aynı loglara üç farklı açıdan bakan üç sekme vardır:
 | Flat | Tüm satırlar geliş sırasına göre, konsol biçiminde; stack trace satırları kaynak koda bağlantı verir |
 | Raw | JSON satırları alındığı haliyle; agent'ın tam olarak ne gönderdiğini görmek için kullanışlıdır |
 
-Tree'deki **Timeline** sütunu her satırı, isteğin ilk satırından son satırına uzanan kendi zaman
-çizelgesi üzerine yerleştirir. Bu sayede bir isteğin süresinin hangi adımlarda geçtiği görülür: bir
-adım, uygulamasının renginde bir çubuk olarak (çalışırken yalnızca çerçeveli, END'i hiç gelmediyse
-kırmızı), bir adımın içindeki satır ise bir eşkenar dörtgen olarak gösterilir.
+**Flat** sekmesi her satırı Tree'deki gibi renklendirir; uyarı ve hata satırlarının, stack
+trace'leriyle birlikte, arka planı da renklidir. Her satır, zamanından ve seviyesinden sonra
+isteğinin kimliğinin ilk sekiz karakterini, o isteğe özgü bir renkte gösterir. Bu kimliğe tıklamak
+o isteğe odaklanır: diğer isteklerin satırları soluklaşır. Kimliğe yeniden tıklanınca tüm satırlar
+eski haline döner.
 
 **Sequence** diyagramı seçili isteği, kimin kimi çağırdığını gösteren bir akış olarak çizer. Her
 uygulama için, metotları `METHOD` adımları loglayan her sınıf için (kendi uygulamasının yanında
@@ -50,7 +51,10 @@ Araç çubuğundaki düğmeler şunları yapar:
 - görünümü duraklatır; yeni satırlar kaybolmaz, devam ettirilene kadar IDE'de bekler
 - görünümü temizler
 - bir uygulama ya da tümü için belirli bir seviyenin altındaki satırları gizler (örneğin yalnızca
-  `WARN` ve üstü)
+  `WARN` ve üstü). Bir isteğin ana adımı, yani başka hiçbir adımın başlatmadığı adım, `START` ve
+  `END` satırlarını korur; böylece görünmeye devam eden bir istek ilk satırını da korur.
+- **Scroll to the End**: en yeni satırları gösterir. Sonuna kaydırılmış bir görünüm yeni satırları
+  izlemeye devam eder; yukarı kaydırmak bunu durdurur, böylece okunan satırlar yerinde kalır.
 - tüm istekleri açar veya kapatır
 - **Soft-Wrap**'i açıp kapatır: açıkken uzun satırlar ağaçta ve konsollarda bir sonraki satırda
   devam eder; kapalıyken her biri tek satırda kalır ve görünüm yatay kaydırılır. IDE bu seçimi

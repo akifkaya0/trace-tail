@@ -14,7 +14,8 @@ class Change(
 
 /**
  * The received lines and the requests built from them. The level filter applies to the kept lines
- * and the new ones, so changing it rebuilds everything from the kept lines.
+ * and the new ones, so changing it rebuilds everything from the kept lines. A request's main step
+ * keeps its START and END lines whatever their level, so a request that shows has its main row.
  */
 class TraceModel {
 
@@ -26,6 +27,9 @@ class TraceModel {
 
     /** A step whose START line is hidden still exists in the app. The lines inside it hang under the nearest shown ancestor. */
     private val skipped = LinkedHashMap<String, String?>()
+
+    /** The main steps' lines that the level hides, kept until a line of their request shows. */
+    private val held = LinkedHashMap<String, MutableList<LogLine>>()
 
     val traces = LinkedHashMap<String, Trace>()
 
@@ -59,7 +63,7 @@ class TraceModel {
             }
             received.addLast(line)
             if (received.size > KEEP_MAX) received.removeFirst()
-            admit(line)?.let { admitted += it; show(it); place(it, changed, removed) }
+            take(line, changed, removed)?.let { admitted += it }
         }
         return Change(admitted, changed, removed, reset = false)
     }
@@ -67,8 +71,9 @@ class TraceModel {
     fun rebuild(): Change {
         traces.clear()
         skipped.clear()
+        held.clear()
         shown.clear()
-        for (line in received) admit(line)?.let { show(it); place(it, LinkedHashSet(), ArrayList()) }
+        for (line in received) take(line, LinkedHashSet(), ArrayList())
         return snapshot()
     }
 
@@ -76,6 +81,7 @@ class TraceModel {
         received.clear()
         traces.clear()
         skipped.clear()
+        held.clear()
         shown.clear()
         return snapshot()
     }
@@ -90,9 +96,22 @@ class TraceModel {
 
     private fun levelOf(app: String) = appLevel[app] ?: allLevel
 
+    /** Shows a line that passes the level, as [admit] places it, and holds a hidden main step's line; returns the shown line. */
+    private fun take(line: LogLine, changed: MutableSet<Trace>, removed: MutableList<Trace>): LogLine? {
+        val shownLine = admit(line)
+        if (shownLine != null) {
+            show(shownLine)
+            place(shownLine, changed, removed)
+        } else if (isMain(line)) {
+            hold(line, changed)
+        }
+        return shownLine
+    }
+
     private fun admit(line: LogLine): LogLine? {
         if (line.level < levelOf(line.app)) {
-            if (line.phase == Phase.START && line.span != null) {
+            // a hidden main step is not skipped: its lines are held, and the lines inside it stay under it
+            if (line.phase == Phase.START && line.span != null && !isMain(line)) {
                 skipped[line.span] = resolve(line.parent)
                 if (skipped.size > SKIPPED_MAX) skipped.remove(skipped.keys.first())
             }
@@ -103,6 +122,22 @@ class TraceModel {
         return if (span == line.span && parent == line.parent) line else line.placed(span, parent)
     }
 
+    /** A line of a main step: one that no other step started. */
+    private fun isMain(line: LogLine) = line.phase != null && line.parent == null && line.trace != null
+
+    /** Keeps a hidden main step's line with its request, or until the request shows. */
+    private fun hold(line: LogLine, changed: MutableSet<Trace>) {
+        val id = line.trace ?: return
+        val trace = traces[id]
+        if (trace != null) {
+            trace.add(line)
+            changed += trace
+            return
+        }
+        held.getOrPut(id) { ArrayList() } += line
+        if (held.size > HELD_MAX) held.remove(held.keys.first())
+    }
+
     private fun resolve(span: String?): String? {
         var s = span
         while (s != null && skipped.containsKey(s)) s = skipped[s]
@@ -111,7 +146,7 @@ class TraceModel {
 
     private fun place(line: LogLine, changed: MutableSet<Trace>, removed: MutableList<Trace>) {
         val id = line.trace ?: return   // a line outside any request shows only in the flat and raw tabs
-        val trace = traces.getOrPut(id) { Trace(id) }
+        val trace = traces.getOrPut(id) { Trace(id).also { t -> held.remove(id)?.forEach(t::add) } }
         trace.add(line)
         changed += trace
         if (traces.size > TRACE_MAX) {
@@ -126,5 +161,6 @@ class TraceModel {
         const val KEEP_MAX = 10_000
         const val TRACE_MAX = 300
         private const val SKIPPED_MAX = 20_000
+        private const val HELD_MAX = 2_000
     }
 }

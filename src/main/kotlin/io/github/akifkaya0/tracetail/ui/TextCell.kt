@@ -70,6 +70,10 @@ internal class TextCell(
             pad() + (fm.charWidth('m'))
     }
 
+    /** The width a column needs to show each of [texts] on one line, without indent. */
+    fun widthOf(texts: List<Part>): Int =
+        2 * pad() + JBUI.scale(4) + (texts.maxOfOrNull { (text, attributes) -> table.getFontMetrics(fontFor(attributes)).stringWidth(text) } ?: 0)
+
     override fun paintComponent(g0: Graphics) {
         g0.color = background
         g0.fillRect(0, 0, width, height)

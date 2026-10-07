@@ -1,6 +1,7 @@
 package io.github.akifkaya0.tracetail.ui
 
 import com.intellij.execution.filters.TextConsoleBuilderFactory
+import com.intellij.execution.impl.ConsoleViewImpl
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.icons.AllIcons
@@ -13,6 +14,8 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.components.service
+import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.actions.ScrollToTheEndToolbarAction
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
@@ -26,7 +29,6 @@ import io.github.akifkaya0.tracetail.TraceFeed
 import io.github.akifkaya0.tracetail.TraceTailServer
 import io.github.akifkaya0.tracetail.model.Change
 import io.github.akifkaya0.tracetail.model.Level
-import io.github.akifkaya0.tracetail.model.LogLine
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -39,7 +41,7 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
 
     private val server = project.service<TraceTailServer>()
     private val feed = project.service<TraceFeed>()
-    private val flat = console()
+    private val flat = FlatConsole(project, this, feed.model)
     private val raw = console()
     private val statusLines = mutableListOf<JBLabel>()
 
@@ -48,8 +50,8 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
         Disposer.register(this, view)
         val shared = listOf(PauseAction(), ClearAction(), LevelGroup(), SoftWrapAction(feed))
         addTab("Tree", view.component, shared + view.treeActions)
-        addTab("Flat", flat.component, shared)
-        addTab("Raw", raw.component, shared)
+        addTab("Flat", flat.component, shared + scrollToEnd(flat.editor))
+        addTab("Raw", raw.component, shared + scrollToEnd((raw as? ConsoleViewImpl)?.editor))
         softWraps(feed.softWraps)
         feed.subscribe(this, object : TraceFeed.Listener {
             override fun changed(change: Change) = print(change)
@@ -87,37 +89,18 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
         toolWindow.contentManager.addContent(content)
     }
 
+    /** The console's own Scroll to the End; a console scrolled to its end keeps following new lines. */
+    private fun scrollToEnd(editor: Editor?): List<AnAction> = listOfNotNull(editor?.let(::ScrollToTheEndToolbarAction))
+
     private fun softWraps(on: Boolean) {
         flat.setSoftWraps(on)
         raw.setSoftWraps(on)
     }
 
     private fun print(change: Change) {
-        if (change.reset) {
-            flat.clear()
-            raw.clear()
-        }
-        for (line in change.admitted) {
-            flat.print(flatText(line), contentType(line.level))
-            raw.print(line.json + "\n", ConsoleViewContentType.NORMAL_OUTPUT)
-        }
-    }
-
-    private fun flatText(l: LogLine) = buildString {
-        append(Palette.time(l.time)).append(' ').append(l.level.name.padEnd(5)).append(' ').append(l.app).append("  ").append(l.title)
-        l.phase?.let { append(' ').append(it) }
-        l.trace?.let { append(" trace=").append(it.take(8)) }
-        l.user?.let { append(" user=").append(it) }
-        for ((key, value) in l.fields) if (key != "startTime") append(' ').append(key).append('=').append(value)
-        append('\n')
-        l.stackTrace?.let { append(it).append('\n') }
-    }
-
-    private fun contentType(level: Level) = when (level) {
-        Level.DEBUG -> ConsoleViewContentType.LOG_DEBUG_OUTPUT
-        Level.INFO -> ConsoleViewContentType.NORMAL_OUTPUT
-        Level.WARN -> ConsoleViewContentType.LOG_WARNING_OUTPUT
-        Level.ERROR -> ConsoleViewContentType.LOG_ERROR_OUTPUT
+        flat.print(change)
+        if (change.reset) raw.clear()
+        for (line in change.admitted) raw.print(line.json + "\n", ConsoleViewContentType.NORMAL_OUTPUT)
     }
 
     private fun updateStatus() {

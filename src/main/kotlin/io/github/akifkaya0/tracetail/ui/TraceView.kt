@@ -45,9 +45,9 @@ class TraceView(project: Project, private val feed: TraceFeed, include: (Trace) 
         }
     }
 
-    /** Expand all and collapse all, for the view's toolbar. */
+    /** Scroll to the end, expand all and collapse all, for the view's toolbar. */
     val treeActions: List<AnAction> = CommonActionsManager.getInstance().let {
-        listOf(it.createExpandAllAction(tree.expander, tree.component), it.createCollapseAllAction(tree.expander, tree.component))
+        listOf(ScrollToEndAction(), it.createExpandAllAction(tree.expander, tree.component), it.createCollapseAllAction(tree.expander, tree.component))
     }
 
     init {
@@ -96,6 +96,17 @@ class TraceView(project: Project, private val feed: TraceFeed, include: (Trace) 
             this.toolbar = toolbar.component
             setContent(scroll)
         }
+    }
+
+    /** Like a console's: shows the newest rows, and a tree scrolled to its end keeps following new ones. */
+    private inner class ScrollToEndAction :
+        DumbAwareAction("Scroll to the End", "Show the newest lines and keep following them", AllIcons.RunConfigurations.Scroll_down) {
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = !tree.atBottom()
+        }
+
+        override fun actionPerformed(e: AnActionEvent) = tree.scrollToBottom()
     }
 
     private fun select(line: LogLine?) {

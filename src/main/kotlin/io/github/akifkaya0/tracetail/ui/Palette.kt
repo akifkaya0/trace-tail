@@ -20,6 +20,10 @@ internal object Palette {
     private val ERROR = JBColor(0xbd3a2c, 0xf06f63)
     private val DEBUG = JBColor(0x6b60b2, 0xa99cf0)
     private val ACCENT = JBColor(0x0b6d89, 0x4fb3d1)
+    private val TRACES = arrayOf(
+        JBColor(0x0b6d89, 0x4fb3d1), JBColor(0x7d45ad, 0xb98ae6), JBColor(0xa94e18, 0xe08c56), JBColor(0x1f7a4c, 0x5fc08a),
+        JBColor(0xa82f64, 0xe07aa6), JBColor(0x4a59c2, 0x8b97ee), JBColor(0x76690d, 0xc9b84a), JBColor(0x137a79, 0x4cc3c1),
+    )
 
     val GRAY: SimpleTextAttributes = SimpleTextAttributes.GRAYED_ATTRIBUTES
     val PLAIN: SimpleTextAttributes = SimpleTextAttributes.REGULAR_ATTRIBUTES
@@ -30,6 +34,9 @@ internal object Palette {
     val RUNNING_ITALIC = SimpleTextAttributes(SimpleTextAttributes.STYLE_ITALIC, ACCENT)
     val START = SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, ACCENT)
     val END = SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, JBColor.GRAY)
+
+    /** The text of the lines that fade while another request is focused. */
+    val fadedColor: Color = JBColor(0xc6cad0, 0x515459)
 
     fun appColor(index: Int): Color = APPS[index % APPS.size]
 
@@ -44,6 +51,13 @@ internal object Palette {
 
     val errorColor: Color get() = ERROR
     val accentColor: Color get() = ACCENT
+
+    /** The background of a warning's and an error's lines in the Flat console. */
+    val warnBackground: Color = JBColor(0xfdf6e8, 0x3a3426)
+    val errorBackground: Color = JBColor(0xfdf0ee, 0x422b2b)
+
+    /** A request's colour, the same wherever its id shows; the first eight characters decide it. */
+    fun traceColor(id: String): Color = TRACES[Math.floorMod(id.take(8).hashCode(), TRACES.size)]
 
     fun level(level: Level) = when (level) {
         Level.DEBUG -> SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, DEBUG)
