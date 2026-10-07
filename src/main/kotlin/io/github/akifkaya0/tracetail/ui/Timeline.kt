@@ -74,14 +74,17 @@ internal class TraceWindow(private val trace: Trace, private val now: Long) {
     private fun at(time: Long) = ((time - from) / span).toFloat().coerceIn(0f, 1f)
 }
 
-/** Draws a row's [Bar]: a step as a bar in its app's colour, a line inside a step as a diamond. */
-internal class TimelineRenderer : JComponent(), TableCellRenderer {
+/**
+ * Draws a row's [Bar]: a step as a bar in its app's colour, a line inside a step as a diamond. In a
+ * taller, wrapped row the bar stays beside the first line.
+ */
+internal class TimelineRenderer(private val firstLineHeight: () -> Int) : JComponent(), TableCellRenderer {
     private var bar: Bar? = null
 
     override fun getTableCellRendererComponent(
         table: JTable, value: Any?, selected: Boolean, hasFocus: Boolean, row: Int, column: Int,
     ): Component {
-        bar = (value as? LineRow)?.bar
+        bar = ((value as? Node)?.row as? LineRow)?.bar
         background = RenderingUtil.getBackground(table, selected)
         return this
     }
@@ -96,7 +99,7 @@ internal class TimelineRenderer : JComponent(), TableCellRenderer {
             val pad = JBUI.scale(6)
             val w = (width - 2 * pad).coerceAtLeast(1)
             val h = JBUI.scale(8)
-            val y = (height - h) / 2
+            val y = (minOf(height, firstLineHeight()) - h) / 2
             val x0 = pad + (b.from * w).toInt()
             if (b.kind == Bar.Kind.MARK) {
                 val r = h / 2

@@ -52,7 +52,10 @@ class TraceView(project: Project, private val feed: TraceFeed, include: (Trace) 
 
     init {
         Disposer.register(this, details)
+        softWraps(feed.softWraps)
         feed.subscribe(this, object : TraceFeed.Listener {
+            override fun softWrapsChanged(on: Boolean) = softWraps(on)
+
             override fun changed(change: Change) {
                 tree.apply(change)
                 val shown = sequence.trace ?: return
@@ -69,6 +72,11 @@ class TraceView(project: Project, private val feed: TraceFeed, include: (Trace) 
     }
 
     override fun dispose() = Unit
+
+    private fun softWraps(on: Boolean) {
+        tree.setWrap(on)
+        details.setSoftWraps(on)
+    }
 
     private fun sequenceTab(): JComponent {
         val copy = object : DumbAwareAction("Copy as Mermaid", "Copy the diagram as Mermaid text", AllIcons.Actions.Copy) {

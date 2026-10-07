@@ -32,7 +32,11 @@ the example below. A run window without tabs, such as a plain Run console, gets 
 In the Tree tabs, **F4** or **Jump to Source** in the context menu opens the class named by the
 line's `log.logger`, at `log.origin.file.line` when the layout sends it. The toolbar pauses the
 view (new lines wait in the IDE until resumed), clears it, hides lines below a level for one app or
-all, and expands or collapses the requests.
+all, expands or collapses the requests, and turns **Soft-Wrap** on or off: wrapped, long lines
+continue on the next line in the tree and the consoles; unwrapped, each stays on one line and the
+view scrolls sideways. The IDE remembers the choice.
+
+In the Tree, a row folds with its arrow, a double click, or the Left and Right keys.
 
 ## How it works
 

@@ -46,13 +46,15 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
     init {
         val view = TraceView(project, feed) { true }
         Disposer.register(this, view)
-        val shared = listOf(PauseAction(), ClearAction(), LevelGroup())
+        val shared = listOf(PauseAction(), ClearAction(), LevelGroup(), SoftWrapAction(feed))
         addTab("Tree", view.component, shared + view.treeActions)
         addTab("Flat", flat.component, shared)
         addTab("Raw", raw.component, shared)
+        softWraps(feed.softWraps)
         feed.subscribe(this, object : TraceFeed.Listener {
             override fun changed(change: Change) = print(change)
             override fun ticked() = updateStatus()
+            override fun softWrapsChanged(on: Boolean) = softWraps(on)
         })
     }
 
@@ -83,6 +85,11 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
         val content = ContentFactory.getInstance().createContent(panel, title, false)
         content.isCloseable = false
         toolWindow.contentManager.addContent(content)
+    }
+
+    private fun softWraps(on: Boolean) {
+        flat.setSoftWraps(on)
+        raw.setSoftWraps(on)
     }
 
     private fun print(change: Change) {

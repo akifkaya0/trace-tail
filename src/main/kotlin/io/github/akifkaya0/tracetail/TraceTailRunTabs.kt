@@ -14,6 +14,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.IconLoader
 import io.github.akifkaya0.tracetail.model.Change
+import io.github.akifkaya0.tracetail.ui.SoftWrapAction
 import io.github.akifkaya0.tracetail.ui.TraceView
 
 /** Tells [TraceTailRunTabs] about every run and debug session that starts. */
@@ -68,7 +69,7 @@ class TraceTailRunTabs(private val project: Project) : Disposable {
             Disposer.register(descriptor, view)
             val content = layout.createContent(CONTENT_ID, view.component, "Trace Tail", ICON, null)
             content.isCloseable = false
-            content.setActions(DefaultActionGroup(view.treeActions), "TraceTailRunTab", view.component)
+            content.setActions(DefaultActionGroup(view.treeActions + SoftWrapAction(feed)), "TraceTailRunTab", view.component)
             layout.addContent(content)
         }
     }
