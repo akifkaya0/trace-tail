@@ -20,9 +20,7 @@ repositories {
 dependencies {
     intellijPlatform {
         local(providers.gradleProperty("platformLocalPath"))
-        // The embedded browser is a bundled plugin of its own, not part of the core platform.
-        bundledPlugin("com.intellij.modules.jcef")
-        // Java run configurations, which receive the receiver's port.
+        // Java run configurations, which receive the receiver's port, and Java classes, which logs point to.
         bundledPlugin("com.intellij.java")
     }
 }

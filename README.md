@@ -4,8 +4,21 @@ An IntelliJ IDEA plugin that shows the logs of the applications you run from the
 trace-grouped view. Each request is folded into a single line; opening it shows its log lines
 nested by `trace.id`, `span.id` and `parent.id`.
 
-**Status:** the plugin receives the logs of the applications it starts and shows them in the tool
-window. The interface is in Turkish and has a light theme only.
+**Status:** the plugin receives the logs of the applications it starts and shows them in the
+Trace Tail tool window, built from the IDE's own components.
+
+## The tool window
+
+| Tab | Shows |
+|---|---|
+| Tree | One row per request, opening into its steps; the selected line's JSON and stack trace beside it |
+| Flat | Every line in arrival order, as a console; stack trace frames link to the source |
+| Raw | The JSON lines as received |
+
+In the Tree tab, **F4** or **Jump to Source** in the context menu opens the class named by the
+line's `log.logger`, at `log.origin.file.line` when the layout sends it. The toolbar pauses the
+view (new lines wait in the IDE until resumed), clears it, hides lines below a level for one app or
+all, and expands or collapses the requests.
 
 ## How it works
 
@@ -55,18 +68,16 @@ with `KeyValuePair` elements inside `EcsLayout`, for example
 | Field | Use |
 |---|---|
 | `@timestamp`, `log.level`, `message`, `service.name` | Every line |
-| `trace.id`, `span.id` | Groups the lines by request; a line without `trace.id` shows only in the flat and raw modes |
+| `trace.id`, `span.id` | Groups the lines by request; a line without `trace.id` shows only in the Flat and Raw tabs |
 | `parent.id` | Nests a step under the step that started it |
 | `event.action` | The event's name, such as `HTTP_IN`; a line without it shows its message instead |
 | `phase` | `START` or `END` of a step |
 | `user.id` | The user who made the request |
 
-The flow, sequence and waterfall modes draw the steps whose `event.action` is `HTTP_IN`, `HTTP_OUT`,
-`MQ_IN`, `MQ_OUT`, `JOB` or `METHOD`, using `route`, `target`, `op`, `queue`, `job`, `method`,
-`outcome`, `status` and `durationMs`. Every other field is shown as `key=value`.
+A step's row shows its outcome (`outcome`, `status`) and its duration. Every other field is shown
+as `key=value`.
 
-The level buttons hide lines below the chosen level, for one application or for all. The plugin
-keeps the last 10,000 lines in the view, so a changed level applies to those too.
+The plugin keeps the last 10,000 lines, so a changed level applies to those too.
 
 The plugin reads each connection on its own thread and keeps at most 20,000 unread lines, dropping
 the oldest. An application's logging therefore never waits on the IDE. If the IDE closes while the
@@ -74,7 +85,7 @@ application keeps running, Log4j2 reports every failed write on the console.
 
 ## Requirements
 
-- IntelliJ IDEA 2026.2 or later, with the bundled Java and Web Browser (JCEF) plugins
+- IntelliJ IDEA 2026.2 or later, with the bundled Java plugin
 - To build: a local IntelliJ IDEA 2026.2 installation. Its path is set in `gradle.properties`
   (`platformLocalPath`), and its bundled Java 25 runtime is used as the toolchain.
 
