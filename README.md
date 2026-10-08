@@ -204,3 +204,7 @@ plugin's port over sockets.
 The agent's tests are the `agent` subproject's `test` task. Each test starts a small application in
 its own JVM with the agent, on one of the logging setups in
 [What the application needs](#what-the-application-needs), and checks the lines that reach its port.
+
+## License
+
+[MIT](LICENSE)

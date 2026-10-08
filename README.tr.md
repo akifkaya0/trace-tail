@@ -211,3 +211,7 @@ de eklentinin portuna soketlerle satır gönderir.
 Agent'ın testleri, `agent` alt projesinin `test` görevidir. Her test, küçük bir uygulamayı
 [Uygulamanın ihtiyaç duyduğu](#uygulamanın-ihtiyaç-duyduğu) bölümündeki log kurulumlarından biriyle,
 agent'la kendi JVM'inde başlatır ve portuna gelen satırları kontrol eder.
+
+## Lisans
+
+[MIT](LICENSE)
