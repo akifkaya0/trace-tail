@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="src/main/resources/META-INF/pluginIcon_dark.svg">
+  <img align="right" width="96" height="96" src="src/main/resources/META-INF/pluginIcon.svg" alt="Trace Tail logo">
+</picture>
+
 # Trace Tail
 
 [English](README.md) | Türkçe
@@ -30,7 +35,7 @@ nerede hata verdiğini tek bakışta görebilirsiniz.
 1. Bu projeyi IntelliJ IDEA'da açın ve `buildPlugin` Gradle görevini çalıştırın (Gradle araç
    penceresi → **trace-tail → Tasks → intellij platform → buildPlugin**).
 2. **Settings → Plugins** içinde dişli simgesine tıklayın, **Install Plugin from Disk…** seçeneğini
-   seçin ve `build/distributions/trace-tail-1.0.0.zip` dosyasını gösterin.
+   seçin ve `build/distributions/trace-tail-1.1.0.zip` dosyasını gösterin.
 3. IDE'den bir Java uygulaması çalıştırın. Logları **View → Tool Windows → Trace Tail** altında
    görünür.
 

@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="src/main/resources/META-INF/pluginIcon_dark.svg">
+  <img align="right" width="96" height="96" src="src/main/resources/META-INF/pluginIcon.svg" alt="Trace Tail logo">
+</picture>
+
 # Trace Tail
 
 English | [Türkçe](README.tr.md)
@@ -26,7 +31,7 @@ you can see at a glance which steps it took, which step started which, and where
 1. Open this project in IntelliJ IDEA and run the `buildPlugin` Gradle task (Gradle tool window →
    **trace-tail → Tasks → intellij platform → buildPlugin**).
 2. In **Settings → Plugins**, click the gear icon, choose **Install Plugin from Disk…** and select
-   `build/distributions/trace-tail-1.0.0.zip`.
+   `build/distributions/trace-tail-1.1.0.zip`.
 3. Run a Java application from the IDE. Its logs show under **View → Tool Windows → Trace Tail**.
 
 See [What the application needs](#what-the-application-needs) for the logging setups the agent

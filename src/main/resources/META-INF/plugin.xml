@@ -42,6 +42,14 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p><b>1.1.0</b></p>
+        <ul>
+            <li>A plugin logo</li>
+            <li>Each request keeps at most 5,000 lines</li>
+            <li>The Tree keeps its selection while requests come in</li>
+            <li>The START tag shows only on an open row</li>
+            <li>The status line shows the Tree's line count</li>
+        </ul>
         <p><b>1.0.0</b>: the first release.</p>
         <ul>
             <li>Tree, Flat and Raw tabs, with the selected line (Line) and request (Sequence) beside the

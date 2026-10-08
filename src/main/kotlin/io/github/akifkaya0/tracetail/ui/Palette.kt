@@ -21,8 +21,8 @@ internal object Palette {
     private val DEBUG = JBColor(0x6b60b2, 0xa99cf0)
     private val ACCENT = JBColor(0x0b6d89, 0x4fb3d1)
     private val TRACES = arrayOf(
-        JBColor(0x0b6d89, 0x4fb3d1), JBColor(0x7d45ad, 0xb98ae6), JBColor(0xa94e18, 0xe08c56), JBColor(0x1f7a4c, 0x5fc08a),
-        JBColor(0xa82f64, 0xe07aa6), JBColor(0x4a59c2, 0x8b97ee), JBColor(0x76690d, 0xc9b84a), JBColor(0x137a79, 0x4cc3c1),
+        JBColor(0x3f8299, 0x7fb5c8), JBColor(0x8565a6, 0xb5a0d4), JBColor(0xa66a45, 0xd2a07e), JBColor(0x3f8263, 0x8bbfa0),
+        JBColor(0xa45a7a, 0xd19ab3), JBColor(0x6370b0, 0xa3abdb), JBColor(0x7f7440, 0xc2b67c), JBColor(0x3d807f, 0x87bebd),
     )
 
     val GRAY: SimpleTextAttributes = SimpleTextAttributes.GRAYED_ATTRIBUTES
