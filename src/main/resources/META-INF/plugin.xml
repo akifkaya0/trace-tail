@@ -42,6 +42,7 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p><b>1.1.2</b>: a new plugin logo.</p>
         <p><b>1.1.1</b>: updated screenshots; the plugin no longer uses internal or experimental platform API.</p>
         <p><b>1.1.0</b></p>
         <ul>

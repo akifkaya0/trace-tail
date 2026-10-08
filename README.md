@@ -38,7 +38,7 @@ you can see at a glance which steps it took, which step started which, and where
 To install a build of this repository instead, run the `buildPlugin` Gradle task (Gradle tool
 window → **trace-tail → Tasks → intellij platform → buildPlugin**), then in **Settings → Plugins**
 click the gear icon, choose **Install Plugin from Disk…** and select
-`build/distributions/trace-tail-1.1.1.zip`.
+`build/distributions/trace-tail-1.1.2.zip`.
 
 See [What the application needs](#what-the-application-needs) for the logging setups the agent
 supports.
