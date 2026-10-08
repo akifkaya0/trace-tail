@@ -11,7 +11,7 @@
         passes through several applications, you can see at a glance which steps it took, which step
         started which, and where it failed.</p>
         <p><img src="https://raw.githubusercontent.com/akifkaya0/trace-tail/main/docs/images/tree-sequence.png"
-                width="700" height="232"
+                width="700" height="293"
                 alt="The Tree tab, with the selected request as a sequence diagram"/></p>
         <ul>
             <li><b>Tree</b>: one row per request, with its line count, outcome, duration and the number of
@@ -27,7 +27,7 @@
             <li>A level filter per app, pause, Scroll to the End and Soft-Wrap</li>
         </ul>
         <p><img src="https://raw.githubusercontent.com/akifkaya0/trace-tail/main/docs/images/flat.png"
-                width="700" height="233"
+                width="700" height="281"
                 alt="The Flat tab, with an error and its stack trace on a tinted background"/></p>
         <p>The application needs no added dependency and no change to its logging configuration. When a
         Java run configuration is run or debugged, the plugin adds its agent to the JVM. The agent adds
@@ -35,13 +35,14 @@
         each log event as an ECS JSON line to the IDE over a loopback port. The application runs on
         Java 8 or later.</p>
         <p><img src="https://raw.githubusercontent.com/akifkaya0/trace-tail/main/docs/images/raw.png"
-                width="700" height="236"
+                width="700" height="293"
                 alt="The Raw tab, with the ECS JSON lines as received"/></p>
         <p>See the <a href="https://github.com/akifkaya0/trace-tail">README</a> for the fields the view
         reads.</p>
     ]]></description>
 
     <change-notes><![CDATA[
+        <p><b>1.1.1</b>: updated screenshots; the plugin no longer uses internal or experimental platform API.</p>
         <p><b>1.1.0</b></p>
         <ul>
             <li>A plugin logo</li>

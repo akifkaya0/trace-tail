@@ -31,7 +31,7 @@ you can see at a glance which steps it took, which step started which, and where
 1. Open this project in IntelliJ IDEA and run the `buildPlugin` Gradle task (Gradle tool window →
    **trace-tail → Tasks → intellij platform → buildPlugin**).
 2. In **Settings → Plugins**, click the gear icon, choose **Install Plugin from Disk…** and select
-   `build/distributions/trace-tail-1.1.0.zip`.
+   `build/distributions/trace-tail-1.1.1.zip`.
 3. Run a Java application from the IDE. Its logs show under **View → Tool Windows → Trace Tail**.
 
 See [What the application needs](#what-the-application-needs) for the logging setups the agent
@@ -75,6 +75,8 @@ of its request's id, in a colour of the request's own. Clicking that id focuses 
 lines of the other requests fade, until the id is clicked again.
 
 ![The Flat tab: every line in arrival order, with an error and its stack trace on a tinted background](docs/images/flat.png)
+
+![The Flat tab with one request focused: the lines of the other requests fade](docs/images/flat-2.png)
 
 ### Raw
 

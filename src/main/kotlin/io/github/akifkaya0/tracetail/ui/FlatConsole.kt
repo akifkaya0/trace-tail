@@ -10,7 +10,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
-import com.intellij.openapi.editor.markup.EffectType
 import com.intellij.openapi.editor.markup.HighlighterLayer
 import com.intellij.openapi.editor.markup.HighlighterTargetArea
 import com.intellij.openapi.editor.markup.RangeHighlighter
@@ -164,9 +163,8 @@ internal class FlatConsole(project: Project, parent: Disposable, private val mod
             val start = entireLength - line.length + ID_FROM
             val color = Palette.traceColor(id)
             val shown = TextAttributes(color, null, null, null, Font.PLAIN)
-            val hovered = TextAttributes(color, null, color, EffectType.LINE_UNDERSCORE, Font.PLAIN)
             val link = HyperlinkInfo { setFocus(if (focus == id) null else id) }
-            return Filter.Result(listOf(Filter.ResultItem(start, start + id.length, link, shown, shown, hovered)))
+            return Filter.Result(listOf(Filter.ResultItem(start, start + id.length, link, shown, shown)))
         }
     }
 

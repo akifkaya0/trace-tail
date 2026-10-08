@@ -35,7 +35,7 @@ nerede hata verdiğini tek bakışta görebilirsiniz.
 1. Bu projeyi IntelliJ IDEA'da açın ve `buildPlugin` Gradle görevini çalıştırın (Gradle araç
    penceresi → **trace-tail → Tasks → intellij platform → buildPlugin**).
 2. **Settings → Plugins** içinde dişli simgesine tıklayın, **Install Plugin from Disk…** seçeneğini
-   seçin ve `build/distributions/trace-tail-1.1.0.zip` dosyasını gösterin.
+   seçin ve `build/distributions/trace-tail-1.1.1.zip` dosyasını gösterin.
 3. IDE'den bir Java uygulaması çalıştırın. Logları **View → Tool Windows → Trace Tail** altında
    görünür.
 
@@ -82,6 +82,8 @@ o isteğe odaklanır: diğer isteklerin satırları soluklaşır. Kimliğe yenid
 eski haline döner.
 
 ![Flat sekmesi: tüm satırlar geliş sırasına göre; bir hata ve stack trace'i renkli arka planda](docs/images/flat.png)
+
+![Flat sekmesinde odaklanılmış bir istek: diğer isteklerin satırları soluklaşır](docs/images/flat-2.png)
 
 ### Raw
 
