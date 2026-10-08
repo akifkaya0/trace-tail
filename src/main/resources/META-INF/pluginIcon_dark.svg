@@ -1,3 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="-48 -48 96 96">
-  <path fill="#FFFFFF" d="M3 -43V-21.5L-13.5 0L-3 8.5V21.5L-46 -10.5L-23 -10Z M-3 43V21.5L13.5 0L3 -8.5V-21.5L46 10.5L23 10Z"/>
+  <path fill="#FFFFFF" d="M-40 -40H16V-26H-5V14L-19 0V-26H-40Z"/>
+  <path fill="#FFFFFF" d="M40 40H-16V26H5V-14L19 0V26H40Z"/>
 </svg>
