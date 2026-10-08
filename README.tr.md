@@ -7,6 +7,9 @@
 
 [English](README.md) | Türkçe
 
+[![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/34886?label=JetBrains%20Marketplace)](https://plugins.jetbrains.com/plugin/34886)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/34886)](https://plugins.jetbrains.com/plugin/34886)
+
 IDE'den çalıştırdığınız uygulamaların loglarını canlı ve trace'e göre gruplanmış bir görünümde
 gösteren bir IntelliJ IDEA eklentisi. Loglar tek bir uzun akış olarak değil, ait oldukları isteğe
 göre toplanmış olarak gelir: her istek tek bir satıra katlanır; açıldığında o isteğin log satırları
@@ -32,12 +35,15 @@ nerede hata verdiğini tek bakışta görebilirsiniz.
 
 ## Kurulum
 
-1. Bu projeyi IntelliJ IDEA'da açın ve `buildPlugin` Gradle görevini çalıştırın (Gradle araç
-   penceresi → **trace-tail → Tasks → intellij platform → buildPlugin**).
-2. **Settings → Plugins** içinde dişli simgesine tıklayın, **Install Plugin from Disk…** seçeneğini
-   seçin ve `build/distributions/trace-tail-1.1.1.zip` dosyasını gösterin.
-3. IDE'den bir Java uygulaması çalıştırın. Logları **View → Tool Windows → Trace Tail** altında
+1. **Settings → Plugins → Marketplace** içinde **Trace Tail**'i aratın ve **Install**'a tıklayın ya
+   da eklentiyi [JetBrains Marketplace sayfasından](https://plugins.jetbrains.com/plugin/34886) kurun.
+2. IDE'den bir Java uygulaması çalıştırın. Logları **View → Tool Windows → Trace Tail** altında
    görünür.
+
+Bu deponun bir derlemesini kurmak için ise `buildPlugin` Gradle görevini çalıştırın (Gradle araç
+penceresi → **trace-tail → Tasks → intellij platform → buildPlugin**), ardından **Settings →
+Plugins** içinde dişli simgesine tıklayın, **Install Plugin from Disk…** seçeneğini seçin ve
+`build/distributions/trace-tail-1.1.1.zip` dosyasını gösterin.
 
 Agent'ın desteklediği log kurulumları için
 [Uygulamanın ihtiyaç duyduğu](#uygulamanın-ihtiyaç-duyduğu) bölümüne bakın.

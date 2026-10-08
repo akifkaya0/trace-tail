@@ -7,6 +7,9 @@
 
 English | [Türkçe](README.tr.md)
 
+[![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/34886?label=JetBrains%20Marketplace)](https://plugins.jetbrains.com/plugin/34886)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/34886)](https://plugins.jetbrains.com/plugin/34886)
+
 An IntelliJ IDEA plugin that shows the logs of the applications you run from the IDE as a live,
 trace-grouped view. The logs do not arrive as one long stream but gathered by the request they
 belong to: each request is folded into a single line; opening it shows its log lines nested by
@@ -28,11 +31,14 @@ you can see at a glance which steps it took, which step started which, and where
 
 ## Installation
 
-1. Open this project in IntelliJ IDEA and run the `buildPlugin` Gradle task (Gradle tool window →
-   **trace-tail → Tasks → intellij platform → buildPlugin**).
-2. In **Settings → Plugins**, click the gear icon, choose **Install Plugin from Disk…** and select
-   `build/distributions/trace-tail-1.1.1.zip`.
-3. Run a Java application from the IDE. Its logs show under **View → Tool Windows → Trace Tail**.
+1. In **Settings → Plugins → Marketplace**, search for **Trace Tail** and click **Install**, or
+   install it from its [JetBrains Marketplace page](https://plugins.jetbrains.com/plugin/34886).
+2. Run a Java application from the IDE. Its logs show under **View → Tool Windows → Trace Tail**.
+
+To install a build of this repository instead, run the `buildPlugin` Gradle task (Gradle tool
+window → **trace-tail → Tasks → intellij platform → buildPlugin**), then in **Settings → Plugins**
+click the gear icon, choose **Install Plugin from Disk…** and select
+`build/distributions/trace-tail-1.1.1.zip`.
 
 See [What the application needs](#what-the-application-needs) for the logging setups the agent
 supports.
