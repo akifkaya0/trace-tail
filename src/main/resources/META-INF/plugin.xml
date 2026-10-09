@@ -42,6 +42,16 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p><b>1.2.0</b></p>
+        <ul>
+            <li>Shift and Ctrl select several rows in the Tree; Line and Sequence show them one under
+                the other</li>
+            <li>Ctrl+C in the Tree copies the request ids of the selected rows</li>
+            <li>Show in Flat, in the Tree's context menu, opens the Flat tab on the line with its
+                request focused</li>
+            <li>Scroll to the End turns on as soon as the Tree is scrolled up</li>
+            <li>END rows line up with their START in the Tree</li>
+        </ul>
         <p><b>1.1.2</b>: a new plugin logo.</p>
         <p><b>1.1.1</b>: updated screenshots; the plugin no longer uses internal or experimental platform API.</p>
         <p><b>1.1.0</b></p>
