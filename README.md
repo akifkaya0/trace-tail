@@ -72,8 +72,9 @@ call, which makes each call 8 to 30 times slower.
 
 The **Sequence** diagram beside the Tree draws the selected request as a flow of who called whom.
 It has a lifeline for each app, for each class whose methods log `METHOD` steps (kept next to its
-app), and for the parties that write no lines: the user, the scheduler, a queue and the outside
-systems an `HTTP_OUT` calls. Each call, return and note is a row in the order the lines were
+app), and for the parties that write no lines: the user (who sends `HTTP_IN` and `WS_IN` and gets
+`WS_OUT`), the scheduler, a queue, the LDAP system of `LDAP_OUT`, the mail system of `MAIL_OUT` and
+the outside systems an `HTTP_OUT` calls. Each call, return and note is a row in the order the lines were
 written; hovering over a row shows its line as a tooltip. **Copy as Mermaid** copies the diagram as
 text, ready to paste into a document or a pull request description.
 
@@ -200,7 +201,7 @@ lines without a message.
 
 Open the project in IntelliJ IDEA and run the `runIde` Gradle task. A separate sandbox IDE starts
 with the plugin installed; the view is under **View → Tool Windows → Trace Tail**. The sandbox IDE
-opens the `sample` folder, two small applications to try the plugin with; see
+opens the `sample` folder, three small applications to try the plugin with; see
 [sample/README.md](sample/README.md). Once you run a Java application in this IDE, its logs start
 showing in the view. The screenshots above were taken with these applications.
 

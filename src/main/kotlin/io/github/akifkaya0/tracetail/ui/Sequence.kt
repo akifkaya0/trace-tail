@@ -41,12 +41,15 @@ internal class Sequence(val trace: Trace, isApp: (String) -> Boolean) {
             "HTTP_OUT" -> mergedChildOf[s]?.app?.let { "app:$it" }
                 ?: fields(s)["target"].orEmpty().let { (if (isApp(it)) "app:" else "ext:") + it }
             "MQ_OUT" -> QUEUE
+            "LDAP_OUT" -> LDAP
+            "MAIL_OUT" -> MAIL
+            "WS_OUT" -> USER
             "METHOD" -> "cls:" + fields(s)["method"].orEmpty().substringBefore('.')
             else -> "app:" + s.app
         }
 
         fun caller(s: Step): String = parentOf(s)?.let(::owner) ?: when (s.event) {
-            "HTTP_IN" -> USER
+            "HTTP_IN", "WS_IN" -> USER
             "JOB" -> SCHEDULER
             "MQ_IN" -> QUEUE
             else -> "app:" + s.app
@@ -147,7 +150,9 @@ internal class Sequence(val trace: Trace, isApp: (String) -> Boolean) {
         val f = r.line.fields
         return when (r.step.event) {
             "HTTP_IN" -> f["route"] ?: "HTTP"
-            "HTTP_OUT" -> f["op"] ?: "call"
+            "HTTP_OUT", "LDAP_OUT", "MAIL_OUT" -> f["op"] ?: "call"
+            // a STOMP frame: its command, and its destination when it has one
+            "WS_IN", "WS_OUT" -> listOfNotNull(f["command"], f["destination"]).joinToString(" ").ifEmpty { "frame" }
             "MQ_OUT", "MQ_IN" -> f["queue"] ?: "queue"
             "JOB" -> f["job"] ?: "job"
             "METHOD" -> f["method"].orEmpty().substringAfter('.') + "()"
@@ -226,6 +231,8 @@ internal class Sequence(val trace: Trace, isApp: (String) -> Boolean) {
         const val USER = "ext:User"
         const val SCHEDULER = "ext:Scheduler"
         const val QUEUE = "ext:Queue"
+        const val LDAP = "ext:ldap"
+        const val MAIL = "ext:mail"
         private val EXT_LABEL = mapOf(USER to "User", SCHEDULER to "Scheduler", QUEUE to "Queue")
     }
 }

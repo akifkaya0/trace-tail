@@ -13,6 +13,7 @@
         <module>tracing</module>
         <module>shop</module>
         <module>stock</module>
+        <module>chat</module>
     </modules>
 
     <properties>

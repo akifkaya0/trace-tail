@@ -1,7 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="shop + stock" type="CompoundRunConfigurationType">
-    <toRun name="stock" type="Application" />
-    <toRun name="shop" type="Application" />
-    <method v="2" />
-  </configuration>
-</component>

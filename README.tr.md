@@ -78,8 +78,9 @@ gerektirir ve her çağrıyı 8 ila 30 kat yavaşlatır.
 
 Tree'nin yanındaki **Sequence** diyagramı seçili isteği, kimin kimi çağırdığını gösteren bir akış
 olarak çizer. Her uygulama için, metotları `METHOD` adımları loglayan her sınıf için (kendi
-uygulamasının yanında tutulur) ve satır yazmayan taraflar için bir yaşam çizgisi bulunur: kullanıcı,
-zamanlayıcı, bir kuyruk ve bir `HTTP_OUT`'un çağırdığı dış sistemler. Her çağrı, dönüş ve not,
+uygulamasının yanında tutulur) ve satır yazmayan taraflar için bir yaşam çizgisi bulunur: kullanıcı
+(`HTTP_IN` ve `WS_IN`'i gönderen, `WS_OUT`'u alan), zamanlayıcı, bir kuyruk, `LDAP_OUT`'un LDAP
+sistemi, `MAIL_OUT`'un e-posta sistemi ve bir `HTTP_OUT`'un çağırdığı dış sistemler. Her çağrı, dönüş ve not,
 satırların yazıldığı sırayla bir satırdır; bir satırın üzerine gelindiğinde ipucu (tooltip) olarak o
 log satırı görünür. **Copy as Mermaid** diyagramı metin olarak kopyalar; bu metin örneğin bir
 dokümana ya da pull request açıklamasına yapıştırılabilir.
@@ -207,7 +208,7 @@ mesaj vermeden atar.
 
 Projeyi IntelliJ IDEA'da açın ve `runIde` Gradle görevini çalıştırın. Eklentinin kurulu olduğu ayrı
 bir deneme (sandbox) IDE'si başlar; görünüm **View → Tool Windows → Trace Tail** altındadır. Deneme
-IDE'si, eklentiyi denemek için hazırlanmış iki küçük uygulamanın bulunduğu `sample` klasörünü açar;
+IDE'si, eklentiyi denemek için hazırlanmış üç küçük uygulamanın bulunduğu `sample` klasörünü açar;
 ayrıntılar için [sample/README.md](sample/README.md) dosyasına bakın. Bu IDE'de bir Java uygulamasını
 çalıştırdığınızda logları burada görmeye başlarsınız. Yukarıdaki ekran görüntüleri bu uygulamalarla
 alınmıştır.

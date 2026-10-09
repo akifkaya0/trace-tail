@@ -124,6 +124,59 @@ class SequenceTest {
         assertEquals(mermaid("order").replace("P3 as stock", "P3 as stock-dev"), mermaid("order", renamed))
     }
 
+    @Test
+    fun drawsTheUserAndTheLdapAndMailSystems() {
+        // STOMP frames come from the user and go back to them; a heartbeat has no destination
+        fun step(ms: Int, span: String, event: String, phase: String, parent: String?, fields: String) = line(
+            """{"@timestamp":"2026-10-07T10:00:00.0${ms}Z","service.name":"chat","trace.id":"ws","span.id":"$span",""" +
+                (parent?.let { """"parent.id":"$it",""" } ?: "") +
+                """"event.action":"$event","phase":"$phase"$fields}""",
+        )
+        fun end(outcome: String) = ""","outcome":"$outcome","durationMs":"5""""
+        val lines = listOf(
+            step(10, "w1", "WS_IN", "START", null, ""","command":"SEND","destination":"/app/history""""),
+            step(20, "w2", "LDAP_OUT", "START", "w1", ""","op":"search""""),
+            step(25, "w2", "LDAP_OUT", "END", "w1", end("SUCCESS")),
+            step(30, "w3", "MAIL_OUT", "START", "w1", ""","op":"send""""),
+            step(35, "w3", "MAIL_OUT", "END", "w1", end("ERROR")),
+            step(40, "w4", "WS_OUT", "START", "w1", ""","command":"MESSAGE","destination":"/user/queue/history""""),
+            step(45, "w4", "WS_OUT", "END", "w1", end("SUCCESS")),
+            step(50, "w1", "WS_IN", "END", null, end("SUCCESS")),
+            step(60, "w5", "WS_IN", "START", null, ""","command":"HEARTBEAT""""),
+            step(65, "w5", "WS_IN", "END", null, end("REJECTED")),
+        )
+        assertEquals(
+            """
+            sequenceDiagram
+                actor P0 as User
+                participant P1 as chat
+                participant P2 as ldap
+                participant P3 as mail
+                P0->>P1: SEND /app/history
+                activate P1
+                P1->>P2: search
+                activate P2
+                P2-->>P1: SUCCESS · 5 ms
+                deactivate P2
+                P1->>P3: send
+                activate P3
+                P3-->>P1: ERROR · 5 ms
+                deactivate P3
+                P1->>P0: MESSAGE /user/queue/history
+                activate P0
+                P0-->>P1: SUCCESS · 5 ms
+                deactivate P0
+                P1-->>P0: SUCCESS · 5 ms
+                deactivate P1
+                P0->>P1: HEARTBEAT
+                activate P1
+                P1-->>P0: REJECTED · 5 ms
+                deactivate P1
+            """.trimIndent(),
+            mermaid("ws", lines),
+        )
+    }
+
     /** The request's diagram as the Sequence tab draws it a second after the request started. */
     private fun mermaid(name: String, lines: List<LogLine> = lines(name)): String {
         val model = TraceModel()
