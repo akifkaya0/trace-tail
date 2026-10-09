@@ -52,8 +52,8 @@ internal class LineRow(
 /** Stands in for the END line of the step [span] that has not come, or never will. */
 internal class PendingRow(val span: String?, val text: String, val lost: Boolean)
 
-/** One row of a request's tree; [row] is a [LineRow] or a [PendingRow]. */
-internal class Node(val traceId: String, val row: Any, val depth: Int) {
+/** One row of a request's tree; [row] is a [LineRow] or a [PendingRow]. [indentDepth] is where the row is drawn; an END row lines up with its START. */
+internal class Node(val traceId: String, val row: Any, val depth: Int, val indentDepth: Int = depth) {
     val children = ArrayList<Node>()
 }
 
@@ -272,7 +272,7 @@ internal class TraceTree(
             s.unfinished -> PendingRow(s.id, "END never came", lost = true)
             else -> PendingRow(s.id, "running · " + Palette.duration(b.now - s.start), lost = false)
         }
-        node.children += Node(b.trace.id, last, depth)
+        node.children += Node(b.trace.id, last, depth, node.depth)
     }
 
     private fun summary(b: Build, s: Step?, group: Boolean): List<Part> {
@@ -423,7 +423,7 @@ internal class TraceTree(
     private fun TextCell.configureMessage(node: Node?) {
         wrap = this@TraceTree.wrap
         arrowSlot = true
-        indent = TextCell.indent(node?.depth ?: 0)
+        indent = TextCell.indent(node?.indentDepth ?: 0)
         val expanded = node != null && node.children.isNotEmpty() && isExpanded(node)
         arrow = when {
             node == null || node.children.isEmpty() -> null
