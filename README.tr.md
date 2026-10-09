@@ -65,6 +65,11 @@ Her istek bir satırdır: önce isteğin ilk satırı, ardından kaç satırı o
 açıldığında isteğin adımları, her biri onu başlatan adımın altında olacak şekilde görünür. Bir satır
 oku, çift tıklama ya da Sol ve Sağ tuşlarıyla katlanır/açılır.
 
+Shift ve Ctrl ile birden fazla satır seçilebilir; Line seçili satırları alt alta, Sequence de
+her birinin isteğini ayrı bir diyagram olarak gösterir. **Ctrl+C** seçili satırların istek
+kimliklerini, her biri bir satırda olacak şekilde kopyalar. Bağlam menüsündeki **Show in Flat**,
+Flat sekmesini o satırda ve isteğine odaklanmış olarak açar.
+
 **F4** ya da bağlam menüsündeki **Jump to Source**, satırı yazan sınıfı (`log.logger`) açar.
 Agent satır numarası göndermez: bunu bulmak her log çağrısında thread'in stack'ini gezmeyi
 gerektirir ve her çağrıyı 8 ila 30 kat yavaşlatır.

@@ -65,7 +65,7 @@ class TraceTailRunTabs(private val project: Project) : Disposable {
             iterator.remove()
             // A run window without tabs, such as a plain Run console, has no layout to add to.
             val layout = descriptor.runnerLayoutUi ?: continue
-            val view = TraceView(project, feed) { run.app in it.apps }
+            val view = TraceView(project, feed, { run.app in it.apps })
             Disposer.register(descriptor, view)
             val content = layout.createContent(CONTENT_ID, view.component, "Trace Tail", ICON, null)
             content.isCloseable = false

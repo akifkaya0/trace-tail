@@ -1,12 +1,20 @@
 package io.github.akifkaya0.tracetail.ui
 
+import com.intellij.ide.ActivityTracker
+import com.intellij.ide.CopyProvider
 import com.intellij.ide.TreeExpander
 import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.actionSystem.UiDataProvider
+import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.ui.PopupHandler
 import com.intellij.ui.ScrollPaneFactory
@@ -21,6 +29,7 @@ import io.github.akifkaya0.tracetail.model.Trace
 import io.github.akifkaya0.tracetail.model.TraceModel
 import java.awt.BorderLayout
 import java.awt.Rectangle
+import java.awt.datatransfer.StringSelection
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
@@ -30,9 +39,9 @@ import javax.swing.AbstractAction
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JScrollPane
+import javax.swing.DefaultListSelectionModel
 import javax.swing.JTable
 import javax.swing.KeyStroke
-import javax.swing.ListSelectionModel
 import javax.swing.SwingUtilities
 import javax.swing.event.ChangeEvent
 import javax.swing.event.ListSelectionEvent
@@ -61,14 +70,17 @@ internal class Node(val traceId: String, val row: Any, val depth: Int, val inden
  * The requests as a tree: one row per request, opening into its steps, nested by span.id and
  * parent.id. The tree is drawn in a table, so that long lines can wrap: the table shows the open
  * rows, and the Message column draws each row's indent and fold arrow. Requests the reader opened,
- * and steps they folded, stay that way while lines arrive.
+ * and steps they folded, stay that way while lines arrive. Shift and Ctrl select several rows;
+ * Ctrl+C copies their requests' ids.
  */
 internal class TraceTree(
     private val project: Project,
     private val model: TraceModel,
     /** Which requests this tree shows. */
     private val include: (Trace) -> Boolean,
-    private val onSelect: (LogLine?) -> Unit,
+    private val onSelect: (List<LogLine>) -> Unit,
+    /** Opens the Flat tab on a line, if this tree has one beside it. */
+    private val showInFlat: ((LogLine) -> Unit)?,
 ) {
 
     /** The reader's choices for one request, kept across rebuilds. */
@@ -108,10 +120,22 @@ internal class TraceTree(
     private var heightsWidth = -1
     private var relayoutPending = false
     private var restoring = false
-    private var selectedSeq: Long? = null
+    private var selectedSeqs: List<Long> = emptyList()
+
+    /** Ctrl+C copies the ids of the selected rows' requests, one per line. */
+    private val copyIds = object : CopyProvider {
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        override fun isCopyEnabled(dataContext: DataContext) = table.selectedRowCount > 0
+        override fun isCopyVisible(dataContext: DataContext) = true
+        override fun performCopy(dataContext: DataContext) {
+            val ids = table.selectedRows.asList().mapNotNull { visible.getOrNull(it)?.traceId }.distinct()
+            CopyPasteManager.getInstance().setContents(StringSelection(ids.joinToString("\n")))
+        }
+    }
 
     val component: JComponent = object : JPanel(BorderLayout()), UiDataProvider {
         override fun uiDataSnapshot(sink: DataSink) {
+            sink[PlatformDataKeys.COPY_PROVIDER] = copyIds
             val line = selectedLine() ?: return
             sink.lazy(CommonDataKeys.NAVIGATABLE) { SourceNavigation.of(project, line) }
         }
@@ -128,7 +152,6 @@ internal class TraceTree(
         table.setShowGrid(false)
         table.intercellSpacing = JBUI.emptySize()
         table.autoResizeMode = JTable.AUTO_RESIZE_LAST_COLUMN
-        table.selectionModel.selectionMode = ListSelectionModel.SINGLE_SELECTION
         table.rowHeight = message.rowHeight
         table.tableHeader.reorderingAllowed = false
         table.tableHeader.resizingAllowed = false
@@ -150,9 +173,13 @@ internal class TraceTree(
         table.selectionModel.addListSelectionListener { e ->
             if (!e.valueIsAdjusting && !restoring) notifySelection()
         }
+        // the toolbar updates Scroll to the End on activity, and turning the mouse wheel is none
+        scroll.verticalScrollBar.model.addChangeListener { ActivityTracker.getInstance().inc() }
         table.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
                 val row = table.rowAtPoint(e.point)
+                // the context menu acts on the row clicked
+                if (SwingUtilities.isRightMouseButton(e) && row >= 0 && !table.isRowSelected(row)) table.setRowSelectionInterval(row, row)
                 val column = table.columnAtPoint(e.point)
                 val node = visible.getOrNull(row) ?: return
                 if (node.children.isEmpty()) return
@@ -165,14 +192,30 @@ internal class TraceTree(
             if (node.children.isNotEmpty() && isExpanded(node)) toggle(node) else selectParent(node)
         }
         // F4 and this menu open the class that wrote the line
-        PopupHandler.installPopupMenu(
-            table,
-            DefaultActionGroup(ActionManager.getInstance().getAction(IdeActions.ACTION_EDIT_SOURCE)),
-            "TraceTailTree",
-        )
+        val menu = DefaultActionGroup(ActionManager.getInstance().getAction(IdeActions.ACTION_EDIT_SOURCE))
+        showInFlat?.let { menu.add(ShowInFlatAction(it)) }
+        PopupHandler.installPopupMenu(table, menu, "TraceTailTree")
     }
 
-    fun selectedLine(): LogLine? = (visible.getOrNull(table.selectedRow)?.row as? LineRow)?.line
+    /** The line of the row the keyboard is on. */
+    fun selectedLine(): LogLine? = (visible.getOrNull(leadRow())?.row as? LineRow)?.line
+
+    private fun selectedLines(): List<LogLine> = table.selectedRows.asList().mapNotNull { (visible.getOrNull(it)?.row as? LineRow)?.line }
+
+    /** The row the keyboard is on: the one last clicked or reached with the arrow keys, if it is selected. */
+    private fun leadRow(): Int = table.selectionModel.leadSelectionIndex.takeIf { table.isRowSelected(it) } ?: table.selectedRow
+
+    private inner class ShowInFlatAction(private val show: (LogLine) -> Unit) :
+        DumbAwareAction("Show in Flat", "Show the line in the Flat tab, with its request focused", null) {
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = selectedLine()?.trace != null
+        }
+
+        override fun actionPerformed(e: AnActionEvent) {
+            selectedLine()?.let(show)
+        }
+    }
 
     /** Whether the newest rows are in view; new rows then keep them in view. */
     fun atBottom(): Boolean {
@@ -335,10 +378,13 @@ internal class TraceTree(
         refresh()
     }
 
-    /** Lists the open rows again, keeping the selection on the same row. */
+    /** Lists the open rows again, keeping the selection on the same rows. */
     private fun refresh() {
         // The table's own selection, not the last one reported: while the mouse button is down, a new selection is not reported yet.
-        val key = visible.getOrNull(table.selectedRow)?.let(::keyOf)
+        val selection = table.selectionModel
+        val keys = table.selectedRows.asList().mapNotNull { visible.getOrNull(it)?.let(::keyOf) }.toSet()
+        val anchor = visible.getOrNull(selection.anchorSelectionIndex)?.let(::keyOf)
+        val lead = visible.getOrNull(selection.leadSelectionIndex)?.let(::keyOf)
         restoring = true
         try {
             visible.clear()
@@ -348,8 +394,10 @@ internal class TraceTree(
                 if (u.open) addOpen(node)
             }
             tableModel.fireTableDataChanged()
-            val index = if (key == null) -1 else visible.indexOfFirst { keyOf(it) == key }
-            if (index >= 0) table.selectionModel.setSelectionInterval(index, index)
+            if (keys.isNotEmpty()) visible.forEachIndexed { i, node -> if (keyOf(node) in keys) selection.addSelectionInterval(i, i) }
+            // Shift+click and Shift+arrow go on from the same rows
+            if (anchor != null) visible.indexOfFirst { keyOf(it) == anchor }.takeIf { it >= 0 }?.let { selection.anchorSelectionIndex = it }
+            if (lead != null) visible.indexOfFirst { keyOf(it) == lead }.takeIf { it >= 0 }?.let { (selection as? DefaultListSelectionModel)?.moveLeadSelectionIndex(it) }
             fitColumns()
             relayout()
         } finally {
@@ -373,10 +421,11 @@ internal class TraceTree(
     }
 
     private fun notifySelection() {
-        val line = selectedLine()
-        if (line?.seq != selectedSeq) {
-            selectedSeq = line?.seq
-            onSelect(line)
+        val lines = selectedLines()
+        val seqs = lines.map { it.seq }
+        if (seqs != selectedSeqs) {
+            selectedSeqs = seqs
+            onSelect(lines)
         }
     }
 
@@ -466,18 +515,18 @@ internal class TraceTree(
         table.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(key, 0), name)
         table.actionMap.put(name, object : AbstractAction() {
             override fun actionPerformed(e: ActionEvent) {
-                visible.getOrNull(table.selectedRow)?.let(action)
+                visible.getOrNull(leadRow())?.let(action)
             }
         })
     }
 
     private fun selectRelative(delta: Int) {
-        val i = (table.selectedRow + delta).coerceIn(0, visible.size - 1)
+        val i = (leadRow() + delta).coerceIn(0, visible.size - 1)
         select(i)
     }
 
     private fun selectParent(node: Node) {
-        val i = table.selectedRow
+        val i = leadRow()
         for (j in i - 1 downTo 0) {
             if (visible[j].traceId == node.traceId && visible[j].depth < node.depth) return select(j)
         }

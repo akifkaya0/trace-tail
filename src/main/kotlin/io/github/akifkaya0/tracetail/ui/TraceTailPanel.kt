@@ -29,10 +29,12 @@ import io.github.akifkaya0.tracetail.TraceFeed
 import io.github.akifkaya0.tracetail.TraceTailServer
 import io.github.akifkaya0.tracetail.model.Change
 import io.github.akifkaya0.tracetail.model.Level
+import io.github.akifkaya0.tracetail.model.LogLine
 import io.github.akifkaya0.tracetail.model.TraceModel
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 
 /**
  * The tool window's tabs: Tree (every request, from every app), Flat (every line in arrival order)
@@ -47,7 +49,7 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
     private val statusLines = mutableListOf<JBLabel>()
 
     init {
-        val view = TraceView(project, feed) { true }
+        val view = TraceView(project, feed, { true }, ::showInFlat)
         Disposer.register(this, view)
         val shared = listOf(PauseAction(), ClearAction(), LevelGroup(), SoftWrapAction(feed))
         addTab("Tree", view.component, shared + view.treeActions)
@@ -92,6 +94,14 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
 
     /** The console's own Scroll to the End; a console scrolled to its end keeps following new lines. */
     private fun scrollToEnd(editor: Editor?): List<AnAction> = listOfNotNull(editor?.let(::ScrollToTheEndToolbarAction))
+
+    /** Opens the Flat tab on the line, with its request focused. */
+    private fun showInFlat(line: LogLine) {
+        val contents = toolWindow.contentManager
+        contents.findContent("Flat")?.let { contents.setSelectedContent(it) }
+        // once the tab is laid out, so that the console can scroll to the line
+        SwingUtilities.invokeLater { flat.show(line) }
+    }
 
     private fun softWraps(on: Boolean) {
         flat.setSoftWraps(on)

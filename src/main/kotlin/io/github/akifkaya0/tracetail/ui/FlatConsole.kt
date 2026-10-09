@@ -8,6 +8,7 @@ import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.editor.markup.HighlighterLayer
@@ -98,6 +99,19 @@ internal class FlatConsole(project: Project, parent: Disposable, private val mod
         }
 
     /* ---------- tints and focus ---------- */
+
+    /** Focuses the line's request and puts the caret on the line. */
+    fun show(line: LogLine) {
+        val id = line.trace?.take(ID_LENGTH) ?: return
+        setFocus(id)
+        val editor = editor ?: return
+        // the start of the line as [print] writes it; its time to the millisecond makes it unique enough
+        val start = Palette.time(line.time) + " " + line.level.name.padEnd(5) + " " + id.padEnd(ID_LENGTH) + " " + line.app + "  " + line.title
+        val offset = editor.document.immutableCharSequence.indexOf(start)
+        if (offset < 0) return
+        editor.caretModel.moveToOffset(offset)
+        editor.scrollingModel.scrollToCaret(ScrollType.CENTER)
+    }
 
     private fun setFocus(id: String?) {
         focus = id

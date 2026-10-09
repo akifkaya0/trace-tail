@@ -19,22 +19,31 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.ScrollPaneFactory
 import com.intellij.ui.components.JBTabbedPane
+import com.intellij.ui.components.panels.VerticalLayout
+import com.intellij.util.ui.JBUI
 import io.github.akifkaya0.tracetail.TraceFeed
 import io.github.akifkaya0.tracetail.model.Change
 import io.github.akifkaya0.tracetail.model.LogLine
 import io.github.akifkaya0.tracetail.model.Trace
 import java.awt.datatransfer.StringSelection
 import javax.swing.JComponent
+import javax.swing.JPanel
 
 /**
- * The requests as a tree. Beside it, the selected line (its JSON and stack trace) and the
- * selected request as a sequence diagram.
+ * The requests as a tree. Beside it, the selected lines (their JSON and stack traces) and the
+ * selected requests as sequence diagrams, one under the other.
  */
-class TraceView(project: Project, private val feed: TraceFeed, include: (Trace) -> Boolean) : Disposable {
+class TraceView(
+    project: Project,
+    private val feed: TraceFeed,
+    include: (Trace) -> Boolean,
+    showInFlat: ((LogLine) -> Unit)? = null,
+) : Disposable {
 
     private val details: ConsoleView = TextConsoleBuilderFactory.getInstance().createBuilder(project).apply { setViewer(true) }.console
-    private val sequence = SequencePanel(feed.model)
-    private val tree = TraceTree(project, feed.model, include, ::select)
+    private val sequences = ArrayList<SequencePanel>()
+    private val sequenceBox = JPanel(VerticalLayout(JBUI.scale(24)))
+    private val tree = TraceTree(project, feed.model, include, ::select, showInFlat)
     private var ticks = 0
 
     val component: JComponent = OnePixelSplitter(false, 0.6f).apply {
@@ -52,21 +61,22 @@ class TraceView(project: Project, private val feed: TraceFeed, include: (Trace) 
 
     init {
         Disposer.register(this, details)
+        showSequences(emptyList())
         softWraps(feed.softWraps)
         feed.subscribe(this, object : TraceFeed.Listener {
             override fun softWrapsChanged(on: Boolean) = softWraps(on)
 
             override fun changed(change: Change) {
                 tree.apply(change)
-                val shown = sequence.trace ?: return
-                if (change.reset || change.changed.any { it.id == shown.id }) sequence.show(feed.model.traces[shown.id])
+                val shown = shownIds()
+                if (shown.isNotEmpty() && (change.reset || change.changed.any { it.id in shown })) showSequences(shown)
             }
 
             override fun ticked() {
                 if (++ticks % REFRESH_EVERY_TICKS != 0) return
                 tree.refreshRunning()
                 // the running steps' times keep growing
-                if (sequence.running) sequence.show(sequence.trace?.let { feed.model.traces[it.id] })
+                if (sequences.any { it.running }) showSequences(shownIds())
             }
         })
     }
@@ -82,14 +92,15 @@ class TraceView(project: Project, private val feed: TraceFeed, include: (Trace) 
         val copy = object : DumbAwareAction("Copy as Mermaid", "Copy the diagram as Mermaid text", AllIcons.Actions.Copy) {
             override fun getActionUpdateThread() = ActionUpdateThread.EDT
             override fun update(e: AnActionEvent) {
-                e.presentation.isEnabled = sequence.trace != null
+                e.presentation.isEnabled = shownIds().isNotEmpty()
             }
 
             override fun actionPerformed(e: AnActionEvent) {
-                sequence.mermaid?.let { CopyPasteManager.getInstance().setContents(StringSelection(it)) }
+                val text = sequences.mapNotNull { it.mermaid }.joinToString("\n\n")
+                if (text.isNotEmpty()) CopyPasteManager.getInstance().setContents(StringSelection(text))
             }
         }
-        val scroll = ScrollPaneFactory.createScrollPane(sequence, true)
+        val scroll = ScrollPaneFactory.createScrollPane(sequenceBox, true)
         val toolbar = ActionManager.getInstance().createActionToolbar("TraceTailSequence", DefaultActionGroup(copy), true)
         toolbar.targetComponent = scroll
         return SimpleToolWindowPanel(true, true).apply {
@@ -109,14 +120,27 @@ class TraceView(project: Project, private val feed: TraceFeed, include: (Trace) 
         override fun actionPerformed(e: AnActionEvent) = tree.scrollToBottom()
     }
 
-    private fun select(line: LogLine?) {
+    private fun select(lines: List<LogLine>) {
         details.clear()
-        if (line != null) {
+        lines.forEachIndexed { i, line ->
+            if (i > 0) details.print("\n", ConsoleViewContentType.NORMAL_OUTPUT)
             details.print(line.prettyJson() + "\n", ConsoleViewContentType.NORMAL_OUTPUT)
             line.stackTrace?.let { details.print("\n" + it + "\n", ConsoleViewContentType.ERROR_OUTPUT) }
         }
-        val trace = line?.trace?.let { feed.model.traces[it] }
-        if (trace?.id != sequence.trace?.id || trace == null) sequence.show(trace)
+        val ids = lines.mapNotNull { it.trace }.distinct()
+        if (ids != shownIds()) showSequences(ids)
+    }
+
+    private fun shownIds(): List<String> = sequences.mapNotNull { it.trace?.id }
+
+    /** Draws the requests one under the other; with none, the diagram asks for a line to be selected. */
+    private fun showSequences(ids: List<String>) {
+        val traces: List<Trace?> = ids.mapNotNull { feed.model.traces[it] }.ifEmpty { listOf(null) }
+        while (sequences.size < traces.size) sequences += SequencePanel(feed.model).also { sequenceBox.add(it) }
+        while (sequences.size > traces.size) sequenceBox.remove(sequences.removeAt(sequences.lastIndex))
+        sequences.zip(traces).forEach { (panel, trace) -> panel.show(trace) }
+        sequenceBox.revalidate()
+        sequenceBox.repaint()
     }
 
     private companion object {

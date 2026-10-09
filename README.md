@@ -60,6 +60,10 @@ many `WARN` and `ERROR` lines it has, and how many of its steps have no `END` li
 row shows the request's steps, each under the step that started it. A row folds with its arrow, a
 double click, or the Left and Right keys.
 
+Shift and Ctrl select several rows; Line then shows their lines one under the other, and Sequence
+draws each of their requests. **Ctrl+C** copies the request ids of the selected rows, one per line.
+**Show in Flat** in the context menu opens the Flat tab on the line, with its request focused.
+
 **F4** or **Jump to Source** in the context menu opens the class that wrote the line
 (`log.logger`). The agent sends no line number: finding it walks the thread's stack on every log
 call, which makes each call 8 to 30 times slower.

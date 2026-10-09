@@ -52,7 +52,8 @@ internal class SequencePanel(private val model: TraceModel) : JPanel() {
         repaint()
     }
 
-    override fun getPreferredSize(): Dimension = layout?.let { Dimension(it.width, it.height) } ?: Dimension(0, 0)
+    override fun getPreferredSize(): Dimension = layout?.let { Dimension(it.width, it.height) }
+        ?: Dimension(getFontMetrics(JBUI.Fonts.smallFont()).stringWidth(HINT) + JBUI.scale(16), JBUI.scale(28))
 
     override fun getToolTipText(event: MouseEvent): String? {
         val l = layout ?: return null
@@ -72,7 +73,7 @@ internal class SequencePanel(private val model: TraceModel) : JPanel() {
             g.font = l?.font ?: JBUI.Fonts.smallFont()
             if (l == null) {
                 g.color = UIUtil.getContextHelpForeground()
-                g.drawString("Select a line of a request to see its sequence diagram.", JBUI.scale(8), JBUI.scale(20))
+                g.drawString(HINT, JBUI.scale(8), JBUI.scale(20))
                 return
             }
             l.paint(g)
@@ -351,5 +352,9 @@ internal class SequencePanel(private val model: TraceModel) : JPanel() {
         }
 
         private fun appColor(app: String) = Palette.appColor(model.appIndex(app))
+    }
+
+    private companion object {
+        const val HINT = "Select a line of a request to see its sequence diagram."
     }
 }
