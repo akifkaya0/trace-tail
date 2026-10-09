@@ -1,6 +1,8 @@
 package io.github.akifkaya0.tracetail.ui
 
 import io.github.akifkaya0.tracetail.model.Requests.at
+import io.github.akifkaya0.tracetail.model.LogLine
+import io.github.akifkaya0.tracetail.model.Requests.line
 import io.github.akifkaya0.tracetail.model.Requests.lines
 import io.github.akifkaya0.tracetail.model.TraceModel
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -113,10 +115,19 @@ class SequenceTest {
         )
     }
 
+    @Test
+    fun drawsACallAtTheAppThatTookIt() {
+        // shop calls its target stock, but the run configuration that took the call is named stock-dev
+        val renamed = lines("order").map {
+            if (it.app == "stock") line(it.json.replace("\"service.name\":\"stock\"", "\"service.name\":\"stock-dev\"")) else it
+        }
+        assertEquals(mermaid("order").replace("P3 as stock", "P3 as stock-dev"), mermaid("order", renamed))
+    }
+
     /** The request's diagram as the Sequence tab draws it a second after the request started. */
-    private fun mermaid(name: String): String {
+    private fun mermaid(name: String, lines: List<LogLine> = lines(name)): String {
         val model = TraceModel()
-        model.add(lines(name))
+        model.add(lines)
         val trace = model.traces.getValue(name)
         trace.analyse(at("10:00:01"))
         return Sequence(trace) { it in model.apps }.mermaid()

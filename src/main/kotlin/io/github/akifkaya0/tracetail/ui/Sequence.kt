@@ -37,7 +37,9 @@ internal class Sequence(val trace: Trace, isApp: (String) -> Boolean) {
         for (s in steps.values) mergedParent(s)?.let { mergedChildOf[it] = s }
 
         fun owner(s: Step): String = when (s.event) {
-            "HTTP_OUT" -> fields(s)["target"].orEmpty().let { (if (isApp(it)) "app:" else "ext:") + it }
+            // the far end's HTTP_IN names the app that took the call, whatever the caller called it
+            "HTTP_OUT" -> mergedChildOf[s]?.app?.let { "app:$it" }
+                ?: fields(s)["target"].orEmpty().let { (if (isApp(it)) "app:" else "ext:") + it }
             "MQ_OUT" -> QUEUE
             "METHOD" -> "cls:" + fields(s)["method"].orEmpty().substringBefore('.')
             else -> "app:" + s.app
