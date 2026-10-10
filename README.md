@@ -194,8 +194,8 @@ lines without a message.
 ## Requirements
 
 - IntelliJ IDEA 2026.2 or later, with the bundled Java plugin
-- To build: a local IntelliJ IDEA 2026.2 installation. Its path is set in `gradle.properties`
-  (`platformLocalPath`), and its bundled Java 25 runtime is used as the toolchain.
+- To build: nothing else. Gradle downloads the IntelliJ IDEA version set in `gradle.properties`
+  (`platformVersion`) and, if the machine has none, a Java 25 toolchain.
 
 ## Running from source
 

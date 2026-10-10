@@ -201,8 +201,8 @@ mesaj vermeden atar.
 ## Gereksinimler
 
 - Paketle gelen Java eklentisiyle birlikte IntelliJ IDEA 2026.2 veya sonrası
-- Derlemek için: yerel bir IntelliJ IDEA 2026.2 kurulumu. Yolu `gradle.properties` dosyasında
-  (`platformLocalPath`) ayarlanır ve paketle gelen Java 25 çalışma ortamı toolchain olarak kullanılır.
+- Derlemek için: başka bir şey gerekmez. Gradle, `gradle.properties` dosyasındaki (`platformVersion`)
+  IntelliJ IDEA sürümünü ve makinede yoksa bir Java 25 toolchain'i indirir.
 
 ## Kaynaktan çalıştırma
 

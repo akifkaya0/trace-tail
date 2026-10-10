@@ -36,7 +36,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     intellijPlatform {
-        local(providers.gradleProperty("platformLocalPath"))
+        intellijIdea(providers.gradleProperty("platformVersion"))
         // Java run configurations, which receive the receiver's port, and Java classes, which logs point to.
         bundledPlugin("com.intellij.java")
     }
