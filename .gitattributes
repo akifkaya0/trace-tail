@@ -1,0 +1,4 @@
+# The Gradle wrapper's start scripts must keep their own line endings to run.
+/gradlew        text eol=lf
+*.bat           text eol=crlf
+*.jar           binary
