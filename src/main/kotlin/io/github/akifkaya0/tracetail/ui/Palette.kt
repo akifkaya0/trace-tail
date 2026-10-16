@@ -40,7 +40,10 @@ internal object Palette {
 
     fun appColor(index: Int): Color = APPS[index % APPS.size]
 
-    fun app(index: Int) = SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, appColor(index))
+    // The attributes are made once: the Flat tab looks up the colours of each line's parts by them.
+    private val APP_TEXT = Array(APPS.size) { SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, APPS[it]) }
+
+    fun app(index: Int) = APP_TEXT[index % APPS.size]
 
     fun levelColor(level: Level): Color = when (level) {
         Level.DEBUG -> DEBUG
@@ -57,19 +60,32 @@ internal object Palette {
     val errorBackground: Color = JBColor(0xfdf0ee, 0x422b2b)
 
     /** A request's colour, the same wherever its id shows; the first eight characters decide it. */
-    fun traceColor(id: String): Color = TRACES[Math.floorMod(id.take(8).hashCode(), TRACES.size)]
+    fun traceColor(id: String): Color = TRACES[traceIndex(id)]
 
-    fun level(level: Level) = when (level) {
-        Level.DEBUG -> SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, DEBUG)
-        Level.INFO -> SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, JBColor.GRAY)
-        Level.WARN -> SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, WARN)
-        Level.ERROR -> ERROR_TEXT
-    }
+    private val TRACE_TEXT = Array(TRACES.size) { SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, TRACES[it]) }
+
+    /** A request's id in its colour. */
+    fun trace(id: String) = TRACE_TEXT[traceIndex(id)]
+
+    private fun traceIndex(id: String) = Math.floorMod(id.take(8).hashCode(), TRACES.size)
+
+    private val LEVEL_TEXT = arrayOf(
+        SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, DEBUG),
+        SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, JBColor.GRAY),
+        SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, WARN),
+        ERROR_TEXT,
+    )
+
+    fun level(level: Level) = LEVEL_TEXT[level.ordinal]
+
+    private val SUCCESS = SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, OK)
+    private val REJECTED = SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, WARN)
+    private val UNAUTHORIZED = SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, JBColor.GRAY)
 
     fun outcome(outcome: String?) = when (outcome) {
-        "SUCCESS" -> SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, OK)
-        "REJECTED" -> SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, WARN)
-        "UNAUTHORIZED" -> SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, JBColor.GRAY)
+        "SUCCESS" -> SUCCESS
+        "REJECTED" -> REJECTED
+        "UNAUTHORIZED" -> UNAUTHORIZED
         else -> ERROR_TEXT
     }
 
@@ -94,5 +110,5 @@ internal object Palette {
         }
     }
 
-    fun plural(n: Int, one: String) = "$n $one" + if (n == 1) "" else "s"
+    fun plural(n: Int, one: String) = String.format(Locale.ROOT, "%,d %s", n, one) + if (n == 1) "" else "s"
 }

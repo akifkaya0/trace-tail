@@ -31,6 +31,8 @@ class LogLine(
     val time: Long,
     val level: Level,
     val app: String,
+    /** The process that wrote the line: its run. */
+    val pid: Long?,
     val trace: String?,
     val span: String?,
     val parent: String?,
@@ -51,9 +53,13 @@ class LogLine(
     /** The event's name, or the message for a line without one, such as a library's own log. */
     val title: String get() = event ?: message
 
+    /** The text the line takes in the Flat tab, which its run's limit counts; set by [TraceModel]. */
+    var size = 0
+        internal set
+
     /** The same line hung under another step, because the step it names is hidden by the level filter. */
     fun placed(span: String?, parent: String?) = LogLine(
-        seq, time, level, app, trace, span, parent, event, phase, user, message, fields, logger, stackTrace, json,
+        seq, time, level, app, pid, trace, span, parent, event, phase, user, message, fields, logger, stackTrace, json,
     )
 
     /** The JSON, indented, without the stack trace, which is shown on its own. */
@@ -67,7 +73,7 @@ class LogLine(
         private const val STACK_TRACE = "error.stack_trace"
         private val OWN_FIELDS = setOf(
             "@timestamp", "log.level", "message", "ecs.version", "service.name", "event.dataset", "host.name",
-            "process.thread.name", "log.logger",
+            "process.pid", "process.thread.name", "log.logger",
             "trace.id", "span.id", "parent.id", "traceId", "spanId", "event.action", "phase", "flow", "user.id",
             STACK_TRACE,
         )
@@ -94,6 +100,7 @@ class LogLine(
                     ?: System.currentTimeMillis(),
                 level = Level.of(str("log.level")),
                 app = str("service.name") ?: "?",
+                pid = str("process.pid")?.toLongOrNull(),
                 // Micrometer also puts the ids into the MDC under these names
                 trace = str("trace.id") ?: str("traceId"),
                 span = str("span.id") ?: str("spanId"),

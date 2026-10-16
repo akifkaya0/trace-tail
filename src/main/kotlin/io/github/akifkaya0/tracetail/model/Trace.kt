@@ -29,11 +29,18 @@ class Trace(val id: String) {
 
     /** The apps that wrote at least one of the lines. */
     val apps = HashSet<String>()
+
+    /** The processes that wrote at least one of the lines: the runs the request went through. */
+    val pids = HashSet<Long?>()
     private val levels = IntArray(Level.entries.size)
 
-    /** The lines dropped to keep the request within [LINES_MAX]. */
-    var dropped = 0
-        private set
+    /** The lines dropped to keep the request within [LINES_MAX]; the Flat tab still shows them. */
+    private val trimmed = ArrayList<LogLine>()
+
+    val dropped: Int get() = trimmed.size
+
+    /** Its oldest lines are gone: dropped to keep it within [LINES_MAX], or deleted to keep a run within its limit. */
+    var partial = false
 
     /** [trim] runs once [lines] passes this; above [LINES_MAX] after a trim that could not get under it. */
     private var trimPast = LINES_MAX
@@ -46,11 +53,30 @@ class Trace(val id: String) {
         if (lines.size > trimPast) trim()
     }
 
+    /** Takes out deleted lines, dropped ones too, and builds the steps again from the rest. */
+    fun remove(seqs: Set<Long>) {
+        val left = lines.filter { it.seq !in seqs }
+        trimmed.removeIf { it.seq in seqs }
+        lines.clear()
+        steps.clear()
+        apps.clear()
+        pids.clear()
+        levels.fill(0)
+        trimmed.forEach(::tally)
+        left.forEach(::place)
+        trimPast = if (lines.size > LINES_MAX) lines.size + LINES_MAX / 10 else LINES_MAX
+    }
+
+    private fun tally(line: LogLine) {
+        apps += line.app
+        pids += line.pid
+        levels[line.level.ordinal]++
+    }
+
     private fun place(line: LogLine) {
         lines += line
-        apps += line.app
-        levels[line.level.ordinal]++
-        val s = steps.getOrPut(line.span) { Step(line.span).also { it.start = line.time; it.app = line.app } }
+        tally(line)
+        val s =steps.getOrPut(line.span) { Step(line.span).also { it.start = line.time; it.app = line.app } }
         when (line.phase) {
             Phase.START -> {
                 s.start = line.time
@@ -109,7 +135,8 @@ class Trace(val id: String) {
         lines.removeIf { it in gone }
         for (s in steps.values) s.notes.removeIf { it in gone }
         steps.values.removeIf { it.startLine == null && it.endLine == null && it.notes.isEmpty() }
-        dropped += gone.size
+        trimmed += gone
+        if (gone.isNotEmpty()) partial = true
         // trying again on every line would scan them all each time and find nothing more to drop
         trimPast = if (lines.size > LINES_MAX) lines.size + LINES_MAX / 10 else LINES_MAX
     }

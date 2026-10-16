@@ -25,7 +25,7 @@ you can see at a glance which steps it took, which step started which, and where
 - **A sequence diagram** of the selected request across apps, classes, queues and outside systems,
   which can be copied as Mermaid
 - **A console of every line**, coloured per request; clicking a request's id fades the others out
-- **A Trace Tail tab in each Run and Debug window**, showing only the requests that app took part in
+- **A Trace Tail tab in each Run and Debug window**, showing only the requests that run took part in
 - **Jump to Source** from a log line to the class that wrote it
 - **No change to the application**: a Java agent adds itself to Logback or Log4j2 at run time
 
@@ -38,7 +38,7 @@ you can see at a glance which steps it took, which step started which, and where
 To install a build of this repository instead, run the `buildPlugin` Gradle task (Gradle tool
 window → **trace-tail → Tasks → intellij platform → buildPlugin**), then in **Settings → Plugins**
 click the gear icon, choose **Install Plugin from Disk…** and select
-`build/distributions/trace-tail-1.3.0.zip`.
+`build/distributions/trace-tail-1.4.0.zip`.
 
 See [What the application needs](#what-the-application-needs) for the logging setups the agent
 supports.
@@ -52,6 +52,11 @@ The tool window has three tabs that look at the same logs from three angles:
 | Tree | One row per request, opening into its steps. Beside it, the selected line's JSON and stack trace (Line) and the selected request as a sequence diagram (Sequence) |
 | Flat | Every line in arrival order, as a console; stack trace frames link to the source |
 | Raw | The JSON lines as received; useful to see exactly what the agent sent |
+
+Each tab's status line counts what the tab shows: the Tree its requests and their lines, Flat and
+Raw their lines. While the view is paused, it also shows how many lines are waiting. Hovering over
+it shows the receiver's port, the connected apps and the limit of each run (see
+[How many lines it keeps](#how-many-lines-it-keeps)).
 
 ### Tree
 
@@ -98,16 +103,16 @@ carries.
 
 ### Run and Debug windows
 
-Each Run or Debug window also gets a **Trace Tail** tab once its app's first line arrives. It shows
-only the requests that app took part in, with the lines the other apps wrote for them, so you keep
-the rest of the request in view while you focus on one app. The app is matched by the run
-configuration's name, which the agent sends as `service.name`. A run window without tabs, such as a
-plain Run console, gets no tab.
+Each Run or Debug window also gets a **Trace Tail** tab once its run's first line arrives. It shows
+only the requests that run took part in, with the lines the other apps wrote for them, so you keep
+the rest of the request in view while you focus on one app. The run is matched by its process id,
+which the agent sends as `process.pid`, so two runs of the same configuration each show their own
+requests. A run window without tabs, such as a plain Run console, gets no tab.
 
 ### Toolbar
 
 - pause the view; new lines are not lost but wait in the IDE until resumed
-- clear the view
+- clear the view: delete every line, of every run
 - hide lines below a level for one app or all (for example, only `WARN` and above). A request's main
   step, the one no other step started, keeps its `START` and `END` lines, so a request that still
   shows keeps its first row.
@@ -166,6 +171,7 @@ not sent.
 | Field | Use |
 |---|---|
 | `@timestamp`, `log.level`, `message`, `service.name` | Every line |
+| `process.pid` | Tells the runs apart; see [How many lines it keeps](#how-many-lines-it-keeps) |
 | `trace.id`, `span.id` | Groups the lines by request; a line without `trace.id` shows only in the Flat and Raw tabs |
 | `parent.id` | Nests a step under the step that started it |
 | `event.action` | The event's name, such as `HTTP_IN`; a line without it shows its message instead |
@@ -175,15 +181,44 @@ not sent.
 A step's row shows its outcome (`outcome`, `status`) and the time between its `START` and `END`.
 Every other field is shown as `key=value`.
 
-The plugin keeps the last 10,000 lines in memory, so a changed level filter applies not only to new
-lines but to those too.
+## How many lines it keeps
 
-The Tree keeps the last 300 requests, with at most 100,000 lines in all; the status line shows how
-many it holds. A request keeps at most 5,000 lines; past that, it drops its oldest lines, a tenth
-at a time. The lines inside its steps go
-first, except the newest 500, so every step keeps its `START` and `END` lines. When that is not
-enough, its oldest finished steps go. Its row then shows how many lines it dropped, and its `WARN`
-and `ERROR` counts still include them.
+### The limit of each run
+
+Each run, one process started from the IDE, keeps as much text as its Run console would: the limit
+set under **Settings | Editor | General | Console**, 1,024 KB unless it was changed. The default is
+enough. The text counted is what the line takes in the Flat tab, its stack trace included. The lines
+that the level filter hides count too: they are kept, so that a changed filter shows them again.
+When the console keeps everything, a run keeps 20,000 KB. The setting is read on every update, so a
+change applies without a restart.
+
+When a run passes its limit, its oldest line goes:
+
+- If the line belongs to a request, the whole request goes: the lines every app wrote for it, from
+  all three tabs.
+- If not, only that line goes.
+
+A request that got a line in the last 30 seconds is still going on, so only its oldest lines go.
+Its row in the Tree then says *older lines dropped*.
+
+All runs together keep at most 50,000 lines. Past that, the run that holds the most lines loses its
+oldest request, by the same rules. The status line then says *limit reached*, and its tooltip says
+which app is losing lines.
+
+A request keeps at most 5,000 lines in the Tree; past that, it drops its oldest lines there, a tenth
+at a time. The lines inside its steps go first, except the newest 500, so every step keeps its
+`START` and `END` lines. When that is not enough, its oldest finished steps go. Its row then says
+*older lines dropped*, and its `WARN` and `ERROR` counts still include those lines.
+
+### Rerun, closing a tab and Clear All
+
+- **Rerun**, when it reuses the run's tab, and **closing** a Run or Debug tab delete the lines of
+  that run only; the lines other runs wrote for the same requests stay. Lines the old run still
+  sends are dropped, and so are the lines it sent while the view was paused.
+- **Clear All** in the run's console deletes the lines that run sent so far. The lines it sends
+  next come in as usual.
+- **Stop** deletes nothing.
+- **Clear** in the Trace Tail toolbar deletes every line.
 
 An application's logging never waits on the IDE; the application does not slow down even if the
 IDE does, or closes. The agent sends from its own thread and keeps at most 10,000 unsent lines; the
@@ -211,7 +246,7 @@ into the IDE.
 
 The plugin's tests are the root project's `test` task. The requests in `src/test/resources/requests`
 are written as the agent sends their lines. The tests read them into the view's model and check the
-steps, the level filter and the Sequence tab's Mermaid text. Another test sends lines to the
+steps, the level filter, the limits and the Sequence tab's Mermaid text. Another test sends lines to the
 plugin's port over sockets.
 
 The agent's tests are the `agent` subproject's `test` task. Each test starts a small application in

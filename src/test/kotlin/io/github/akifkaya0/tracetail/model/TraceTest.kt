@@ -102,6 +102,7 @@ class TraceTest {
         val kept = Trace.LINES_MAX - Trace.LINES_MAX / 10
         assertEquals(kept, trace.lines.size)
         assertEquals(Trace.LINES_MAX + 1 - kept, trace.dropped)
+        assertTrue(trace.partial)
         assertEquals("Started", trace.lines.first().message)
         assertEquals("rate ${Trace.LINES_MAX - kept + 1}", trace.lines[1].message)
         val notes = trace.steps.getValue("j1").notes

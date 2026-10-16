@@ -1,6 +1,7 @@
 package io.github.akifkaya0.tracetail.agent;
 
 import java.lang.instrument.Instrumentation;
+import java.lang.management.ManagementFactory;
 
 /**
  * Sends an application's log events to Trace Tail without any change to the application. The
@@ -24,6 +25,9 @@ public final class TraceTailAgent {
     static volatile Sender sender;
     static volatile String app;
 
+    /** Tells the plugin which run a line came from; two runs of one configuration share its name. */
+    static volatile String pid;
+
     private TraceTailAgent() {
     }
 
@@ -36,6 +40,7 @@ public final class TraceTailAgent {
             }
             int port = Integer.parseInt(args.substring(0, comma).trim());
             app = args.substring(comma + 1);
+            pid = pid();
             sender = new Sender(port);
             if (System.getProperty(LOGBACK_STATUS_LISTENER) == null) {
                 System.setProperty(LOGBACK_STATUS_LISTENER, "io.github.akifkaya0.tracetail.agent.LogbackHook");
@@ -45,6 +50,23 @@ public final class TraceTailAgent {
         } catch (Throwable t) {
             warn("not started: " + t);
         }
+    }
+
+    /** ProcessHandle came with Java 9, so it is called by reflection. */
+    static String pid() {
+        try {
+            Class<?> handle = Class.forName("java.lang.ProcessHandle");
+            return String.valueOf(handle.getMethod("pid").invoke(handle.getMethod("current").invoke(null)));
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return runtimePid();
+        }
+    }
+
+    /** On Java 8, the runtime's name is the process id and the host name, such as {@code 1234@host}. */
+    static String runtimePid() {
+        String name = ManagementFactory.getRuntimeMXBean().getName();
+        int at = name.indexOf('@');
+        return at > 0 ? name.substring(0, at) : null;
     }
 
     static void warn(String message) {

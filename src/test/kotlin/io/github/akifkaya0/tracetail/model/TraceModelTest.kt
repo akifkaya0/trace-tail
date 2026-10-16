@@ -74,11 +74,12 @@ class TraceModelTest {
     }
 
     @Test
-    fun keepsTheLastLinesOnly() {
-        model.add((1..TraceModel.KEEP_MAX + 1).map { line("""{"message":"line $it"}""") })
-        val rebuilt = model.rebuild().admitted
-        assertEquals(TraceModel.KEEP_MAX, rebuilt.size)
-        assertEquals("line 2", rebuilt.first().message)
+    fun keepsEveryLineForANewLevel() {
+        model.add((1..12_000).map { line("""{"message":"line $it","trace.id":"r${it / 10}"}""") })
+        model.setLevel(null, Level.INFO)
+        val rebuilt = model.rebuild()
+        assertEquals(12_000, rebuilt.admitted.size)
+        assertEquals(12_000, model.traceLines)
     }
 
     @Test
@@ -96,27 +97,90 @@ class TraceModelTest {
     }
 
     @Test
-    fun dropsTheOldestRequests() {
-        val change = model.add((1..TraceModel.TRACE_MAX + 1).map { line("""{"message":"m","trace.id":"r$it"}""") })
-        assertEquals(TraceModel.TRACE_MAX, model.traces.size)
-        assertEquals("r2", model.traces.keys.first())
-        assertEquals(listOf("r1"), change.removed.map { it.id })
-        assertFalse(change.changed.any { it.id == "r1" })
+    fun deletesTheWholeOldestRequestOfARunPastItsLimit() {
+        val model = TraceModel(measure = { 100 }, limit = { 1_000 })
+        model.add(listOf(line(1, "old", "a"), line(2, "old", "b"), line(1, "old", "c")), now = 0)
+        model.add((1..8).map { line(1, "new", "n$it") }, now = 0)
+        // the eleventh line of run 1 is over its limit; the old request goes from both runs
+        val change = model.add(listOf(line(1, "new", "n9")), now = TraceModel.ACTIVE_MS)
+        assertEquals(listOf("old"), change.removed.map { it.id })
+        assertEquals(listOf("a", "b", "c"), change.deleted.map { it.message })
+        assertEquals(listOf("n9"), change.admitted.map { it.message })
+        assertEquals(listOf("new"), model.traces.keys.toList())
+        assertFalse(model.hasRun(2))
+        assertEquals(9, model.kept)
     }
 
     @Test
-    fun dropsTheOldestRequestsPastTheLinesOfAllRequests() {
-        fun lines(request: String, count: Int) = (1..count).map { line("""{"message":"m","trace.id":"$request","span.id":"s"}""") }
-        // 1 + 20 × 4,999 = 99,981 lines
-        model.add(lines("r1", 1))
-        for (r in 2..21) model.add(lines("r$r", 4_999))
-        val change = model.add(lines("r1", 20))
-        // r1 is the oldest, but the lines went to it
-        assertEquals(listOf("r2"), change.removed.map { it.id })
-        assertEquals(listOf("r1", "r3"), model.traces.keys.take(2))
-        assertEquals(TraceModel.TRACE_LINES_MAX + 1 - 4_999, model.traces.values.sumOf { it.lines.size })
-        // the count the status line shows
-        assertEquals(TraceModel.TRACE_LINES_MAX + 1 - 4_999, model.traceLines)
+    fun deletesOnlyTheOldestLinesOfARequestThatIsStillGettingLines() {
+        val model = TraceModel(measure = { 100 }, limit = { 1_000 })
+        model.add((1..10).map { line(1, "r", "m$it") }, now = 0)
+        val change = model.add(listOf(line(1, "r", "m11"), line(1, "r", "m12")), now = TraceModel.ACTIVE_MS - 1)
+        assertEquals(listOf("m1", "m2"), change.deleted.map { it.message })
+        val trace = model.traces.getValue("r")
+        assertEquals(10, trace.lines.size)
+        assertTrue(trace.partial)
+        assertEquals(listOf(trace), change.changed.toList())
+    }
+
+    @Test
+    fun deletesALineOutsideAnyRequestAlone() {
+        val model = TraceModel(measure = { 100 }, limit = { 200 })
+        model.add(listOf(line(1, "r", "in"), line(1, null, "out")), now = 0)
+        assertEquals(listOf("in"), model.add(listOf(line(1, null, "next")), now = TraceModel.ACTIVE_MS).deleted.map { it.message })
+        // now the oldest line is outside any request
+        assertEquals(listOf("out"), model.add(listOf(line(1, null, "last")), now = TraceModel.ACTIVE_MS).deleted.map { it.message })
+        assertEquals(listOf("next", "last"), model.snapshot().admitted.map { it.message })
+    }
+
+    @Test
+    fun countsTheLinesTheLevelHidesTowardsTheLimit() {
+        val model = TraceModel(measure = { 100 }, limit = { 300 })
+        model.setLevel(null, Level.WARN)
+        model.add(listOf(line("""{"message":"hidden","log.level":"INFO","process.pid":"1"}""")), now = 0)
+        model.add((1..3).map { line("""{"message":"w$it","log.level":"WARN","process.pid":"1"}""") }, now = 0)
+        assertEquals(3, model.kept)
+        model.setLevel(null, Level.DEBUG)
+        assertEquals(listOf("w1", "w2", "w3"), model.rebuild().admitted.map { it.message })
+    }
+
+    @Test
+    fun deletesFromTheRunWithTheMostLinesPastTheLinesOfAllRuns() {
+        val model = TraceModel(measure = { 1 })
+        model.add((1..10_000).map { line(1, null, "small") }, now = 0)
+        model.add((1..40_000).map { line(2, "big$it", "big") }, now = 0)
+        assertEquals(null, model.capped)
+        val change = model.add(listOf(line(1, null, "more")), now = TraceModel.ACTIVE_MS)
+        assertEquals(TraceModel.LINES_MAX, model.kept)
+        assertEquals(listOf("big1"), change.removed.map { it.id })
+        assertEquals("app2", model.capped)
+        model.removeRun(2, ends = false)
+        assertEquals(null, model.capped)
+    }
+
+    @Test
+    fun deletesOnlyTheRunsOwnLinesOfARequest() {
+        model.add(listOf(line(1, "r", "one"), line(2, "r", "two"), line(1, null, "alone")))
+        val change = model.removeRun(1, ends = false)
+        assertEquals(listOf("one", "alone"), change.deleted.map { it.message })
+        val trace = model.traces.getValue("r")
+        assertEquals(listOf("two"), trace.lines.map { it.message })
+        assertEquals(setOf<Long?>(2), trace.pids)
+        assertFalse(trace.partial)
+        assertEquals(listOf(trace), change.changed.toList())
+        // a run whose console was cleared keeps sending
+        assertEquals(1, model.add(listOf(line(1, "r", "again"))).admitted.size)
+    }
+
+    @Test
+    fun dropsTheLinesARunSendsAfterItEnded() {
+        model.add(listOf(line(1, "r", "one")))
+        val change = model.removeRun(1, ends = true)
+        assertEquals(listOf("r"), change.removed.map { it.id })
+        assertTrue(model.add(listOf(line(1, "r", "late"))).admitted.isEmpty())
+        // Windows gave the id to a new process
+        model.accept(1)
+        assertEquals(1, model.add(listOf(line(1, "r", "new"))).admitted.size)
     }
 
     @Test
@@ -135,4 +199,8 @@ class TraceModelTest {
         assertTrue(model.traces.isEmpty())
         assertTrue(model.rebuild().admitted.isEmpty())
     }
+
+    /** A line of the run with process id [pid], in the app `app<pid>`. */
+    private fun line(pid: Int, trace: String?, message: String) =
+        line("""{"message":"$message","service.name":"app$pid","process.pid":"$pid"${trace?.let { ",\"trace.id\":\"$it\"" }.orEmpty()}}""")
 }

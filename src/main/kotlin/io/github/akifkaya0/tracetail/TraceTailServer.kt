@@ -7,7 +7,6 @@ import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.thread
 
 /**
@@ -24,8 +23,6 @@ class TraceTailServer : Disposable {
     private val server = ServerSocket(0, 50, InetAddress.getLoopbackAddress())
     private val connections = ConcurrentHashMap.newKeySet<Socket>()
     private val inbox = ArrayDeque<String>()   // guarded by itself
-    private val received = AtomicLong()
-    private val dropped = AtomicLong()
 
     val port: Int get() = server.localPort
 
@@ -36,7 +33,10 @@ class TraceTailServer : Disposable {
     /** Takes up to [max] of the waiting lines, oldest first. */
     fun drain(max: Int): List<String> = synchronized(inbox) { List(minOf(max, inbox.size)) { inbox.removeFirst() } }
 
-    fun stats() = Stats(port, connections.size, received.get(), dropped.get())
+    /** The lines waiting to be taken. */
+    fun waiting(): Int = synchronized(inbox) { inbox.size }
+
+    fun stats() = Stats(port, connections.size)
 
     private fun acceptLoop() {
         while (true) {
@@ -62,11 +62,9 @@ class TraceTailServer : Disposable {
     }
 
     private fun offer(line: String) {
-        received.incrementAndGet()
         synchronized(inbox) {
             if (inbox.size == INBOX_CAPACITY) {
                 inbox.removeFirst()
-                dropped.incrementAndGet()
             }
             inbox.addLast(line)
         }
@@ -84,7 +82,7 @@ class TraceTailServer : Disposable {
         }
     }
 
-    data class Stats(val port: Int, val connections: Int, val received: Long, val dropped: Long)
+    data class Stats(val port: Int, val connections: Int)
 
     private companion object {
         const val INBOX_CAPACITY = 20_000

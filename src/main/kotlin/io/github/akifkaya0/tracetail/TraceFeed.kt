@@ -1,5 +1,6 @@
 package io.github.akifkaya0.tracetail
 
+import com.intellij.execution.impl.ConsoleBuffer
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
@@ -10,6 +11,7 @@ import io.github.akifkaya0.tracetail.model.Change
 import io.github.akifkaya0.tracetail.model.Level
 import io.github.akifkaya0.tracetail.model.LogLine
 import io.github.akifkaya0.tracetail.model.TraceModel
+import io.github.akifkaya0.tracetail.ui.FlatConsole
 import javax.swing.Timer
 
 /**
@@ -32,7 +34,7 @@ class TraceFeed(project: Project) : Disposable {
     private val listeners = mutableListOf<Listener>()
     private val timer = Timer(TICK_MILLIS) { tick() }
 
-    val model = TraceModel()
+    val model = TraceModel(measure = { FlatConsole.length(it) }, limit = { runLimit() })
 
     /** While paused, new lines wait in the receiver. */
     var paused = false
@@ -63,10 +65,26 @@ class TraceFeed(project: Project) : Disposable {
 
     fun clear() = publish(model.clear())
 
+    /** Deletes the lines of the run with that process id; see [TraceModel.removeRun]. */
+    fun removeRun(pid: Long, ends: Boolean) = publish(model.removeRun(pid, ends))
+
+    /** A run started; its process id may be one that Windows gave out again. */
+    fun started(pid: Long) = model.accept(pid)
+
+    /** How many lines the next tick takes: as many as the views take in about [TICK_BUDGET_MILLIS], as the last tick went. */
+    private var pull = PULL_MAX
+
     private fun tick() {
         if (!paused) {
-            val lines = server.drain(PULL_MAX).mapNotNull(LogLine::parse)
+            val started = System.nanoTime()
+            val drained = server.drain(pull)
+            val lines = drained.mapNotNull(LogLine::parse)
             if (lines.isNotEmpty()) publish(model.add(lines))
+            // the rest waits in the receiver, so the IDE stays responsive however fast the apps log
+            val millis = maxOf((System.nanoTime() - started) / 1_000_000, 1)
+            if (drained.size == pull || millis > TICK_BUDGET_MILLIS) {
+                pull = (drained.size * TICK_BUDGET_MILLIS / millis).toInt().coerceIn(PULL_MIN, PULL_MAX)
+            }
         }
         listeners.toList().forEach { it.ticked() }
     }
@@ -80,6 +98,16 @@ class TraceFeed(project: Project) : Disposable {
     companion object {
         const val TICK_MILLIS = 250
         private const val PULL_MAX = 2_000
+        private const val PULL_MIN = 100
+        private const val TICK_BUDGET_MILLIS = 50L
         private const val SOFT_WRAPS_KEY = "tracetail.softWraps"
+        private const val NO_LIMIT_KB = 20_000L
+
+        /**
+         * The Flat text a run keeps: the console's, as set in Settings | Editor | General | Console,
+         * read each time, or [NO_LIMIT_KB] when the console keeps everything.
+         */
+        fun runLimit(): Long =
+            if (ConsoleBuffer.useCycleBuffer() && ConsoleBuffer.getCycleBufferSize() > 0) ConsoleBuffer.getCycleBufferSize().toLong() else NO_LIMIT_KB * 1024
     }
 }

@@ -19,6 +19,7 @@ final class JsonLine {
         add("log.level", level);
         add("message", message);
         add("service.name", TraceTailAgent.app);
+        add("process.pid", TraceTailAgent.pid);
         add("process.thread.name", thread);
         add("log.logger", logger);
     }

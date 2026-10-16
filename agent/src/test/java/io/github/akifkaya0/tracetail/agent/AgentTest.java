@@ -52,6 +52,13 @@ class AgentTest {
 
     @ParameterizedTest
     @MethodSource("setups")
+    void sendsTheProcessId(String setup) {
+        AppRun run = run(setup);
+        assertEquals(String.valueOf(run.pid), run.line("first line").get("process.pid"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("setups")
     void leavesOutWhereTheLineWasWritten(String setup) {
         // finding it would make each log call 8 to 30 times slower
         Map<String, String> line = run(setup).line("first line");

@@ -26,6 +26,7 @@ import io.github.akifkaya0.tracetail.model.Change
 import io.github.akifkaya0.tracetail.model.LogLine
 import io.github.akifkaya0.tracetail.model.Trace
 import java.awt.datatransfer.StringSelection
+import java.awt.event.HierarchyEvent
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -59,21 +60,29 @@ class TraceView(
         listOf(ScrollToEndAction(), it.createExpandAllAction(tree.expander, tree.component), it.createCollapseAllAction(tree.expander, tree.component))
     }
 
+    /** Set when requests changed while the view was off screen; it starts over from the model when it shows again. */
+    private var stale = false
+
     init {
         Disposer.register(this, details)
         showSequences(emptyList())
         softWraps(feed.softWraps)
+        component.addHierarchyListener { e ->
+            if (e.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() != 0L && component.isShowing && stale) {
+                stale = false
+                apply(feed.model.snapshot())
+            }
+        }
         feed.subscribe(this, object : TraceFeed.Listener {
             override fun softWrapsChanged(on: Boolean) = softWraps(on)
 
             override fun changed(change: Change) {
-                tree.apply(change)
-                val shown = shownIds()
-                if (shown.isNotEmpty() && (change.reset || change.changed.any { it.id in shown })) showSequences(shown)
+                // building rows no one sees costs as much as building those in view
+                if (component.isShowing) apply(change) else stale = true
             }
 
             override fun ticked() {
-                if (++ticks % REFRESH_EVERY_TICKS != 0) return
+                if (!component.isShowing || ++ticks % REFRESH_EVERY_TICKS != 0) return
                 tree.refreshRunning()
                 // the running steps' times keep growing
                 if (sequences.any { it.running }) showSequences(shownIds())
@@ -82,6 +91,12 @@ class TraceView(
     }
 
     override fun dispose() = Unit
+
+    private fun apply(change: Change) {
+        tree.apply(change)
+        val shown = shownIds()
+        if (shown.isNotEmpty() && (change.reset || change.changed.any { it.id in shown })) showSequences(shown)
+    }
 
     private fun softWraps(on: Boolean) {
         tree.setWrap(on)

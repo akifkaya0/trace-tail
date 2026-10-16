@@ -1,8 +1,5 @@
 package io.github.akifkaya0.tracetail.ui
 
-import com.intellij.execution.filters.TextConsoleBuilderFactory
-import com.intellij.execution.impl.ConsoleViewImpl
-import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
@@ -14,7 +11,6 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.components.service
-import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.actions.ScrollToTheEndToolbarAction
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.DumbAwareAction
@@ -32,6 +28,7 @@ import io.github.akifkaya0.tracetail.model.Level
 import io.github.akifkaya0.tracetail.model.LogLine
 import io.github.akifkaya0.tracetail.model.TraceModel
 import java.awt.BorderLayout
+import java.util.Locale
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
@@ -42,19 +39,25 @@ import javax.swing.SwingUtilities
  */
 class TraceTailPanel(private val project: Project, private val toolWindow: ToolWindow) : Disposable {
 
+    /** A tab's status line, and what it counts. */
+    private class Status(val label: JBLabel, val count: () -> String)
+
     private val server = project.service<TraceTailServer>()
     private val feed = project.service<TraceFeed>()
     private val flat = FlatConsole(project, this, feed.model)
-    private val raw = console()
-    private val statusLines = mutableListOf<JBLabel>()
+    private val raw = LogView(project, this, { listOf(it.json + "\n" to ConsoleViewContentType.NORMAL_OUTPUT) }, folds = false)
+    private val statusLines = mutableListOf<Status>()
 
     init {
         val view = TraceView(project, feed, { true }, ::showInFlat)
         Disposer.register(this, view)
+        val model = feed.model
         val shared = listOf(PauseAction(), ClearAction(), LevelGroup(), SoftWrapAction(feed))
-        addTab("Tree", view.component, shared + view.treeActions)
-        addTab("Flat", flat.component, shared + scrollToEnd(flat.editor))
-        addTab("Raw", raw.component, shared + scrollToEnd((raw as? ConsoleViewImpl)?.editor))
+        addTab("Tree", view.component, shared + view.treeActions) {
+            Palette.plural(model.traces.size, "trace") + " · " + Palette.plural(model.traceLines, "line")
+        }
+        addTab("Flat", flat.component, shared + ScrollToTheEndToolbarAction(flat.editor)) { Palette.plural(flat.lineCount, "line") }
+        addTab("Raw", raw.component, shared + ScrollToTheEndToolbarAction(raw.editor)) { Palette.plural(raw.lineCount, "line") }
         softWraps(feed.softWraps)
         feed.subscribe(this, object : TraceFeed.Listener {
             override fun changed(change: Change) = print(change)
@@ -65,20 +68,14 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
 
     override fun dispose() = Unit
 
-    private fun console(): ConsoleView {
-        val console = TextConsoleBuilderFactory.getInstance().createBuilder(project).apply { setViewer(true) }.console
-        Disposer.register(this, console)
-        return console
-    }
-
-    private fun addTab(title: String, component: JComponent, actions: List<AnAction>) {
+    private fun addTab(title: String, component: JComponent, actions: List<AnAction>, count: () -> String) {
         val toolbar = ActionManager.getInstance().createActionToolbar("TraceTail$title", DefaultActionGroup(actions), false)
         toolbar.targetComponent = component
         val status = JBLabel().apply {
             border = JBUI.Borders.empty(2, 8)
             foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
         }
-        statusLines += status
+        statusLines += Status(status, count)
         val body = JPanel(BorderLayout()).apply {
             add(component, BorderLayout.CENTER)
             add(status, BorderLayout.SOUTH)
@@ -92,14 +89,11 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
         toolWindow.contentManager.addContent(content)
     }
 
-    /** The console's own Scroll to the End; a console scrolled to its end keeps following new lines. */
-    private fun scrollToEnd(editor: Editor?): List<AnAction> = listOfNotNull(editor?.let(::ScrollToTheEndToolbarAction))
-
     /** Opens the Flat tab on the line, with its request focused. */
     private fun showInFlat(line: LogLine) {
         val contents = toolWindow.contentManager
         contents.findContent("Flat")?.let { contents.setSelectedContent(it) }
-        // once the tab is laid out, so that the console can scroll to the line
+        // once the tab is laid out, so that the view can scroll to the line
         SwingUtilities.invokeLater { flat.show(line) }
     }
 
@@ -110,21 +104,27 @@ class TraceTailPanel(private val project: Project, private val toolWindow: ToolW
 
     private fun print(change: Change) {
         flat.print(change)
-        if (change.reset) raw.clear()
-        for (line in change.admitted) raw.print(line.json + "\n", ConsoleViewContentType.NORMAL_OUTPUT)
+        raw.show(change)
     }
 
+    /** Each tab counts the lines it shows; the port, the apps and the limit are in the tooltip. */
     private fun updateStatus() {
         val s = server.stats()
-        val text = buildString {
-            append("Listening on port ${s.port}")
-            append(" · ${Palette.plural(s.connections, "app")} connected")
-            append(" · ${s.received} lines received")
-            if (s.dropped > 0) append(" · ${s.dropped} oldest lines discarded")
-            append(" · ${feed.model.traceLines} of ${TraceModel.TRACE_LINES_MAX} lines in the Tree")
-            if (feed.paused) append(" · paused")
+        val capped = feed.model.capped
+        val state = buildString {
+            if (feed.paused) append(" · paused · ${String.format(Locale.ROOT, "%,d", server.waiting())} waiting")
+            if (capped != null) append(" · limit reached")
         }
-        statusLines.forEach { it.text = text }
+        val tooltip = buildString {
+            append("<html>Listening on port ${s.port}<br>${Palette.plural(s.connections, "app")} connected")
+            append("<br>Each run keeps up to ${String.format(Locale.ROOT, "%,d", TraceFeed.runLimit() / 1024)} KB, the console's limit")
+            if (capped != null) append("<br>All runs hold ${String.format(Locale.ROOT, "%,d", TraceModel.LINES_MAX)} lines: the oldest lines of $capped go")
+            append("</html>")
+        }
+        for (status in statusLines) {
+            status.label.text = status.count() + state
+            status.label.toolTipText = tooltip
+        }
     }
 
     /* ---------- actions ---------- */

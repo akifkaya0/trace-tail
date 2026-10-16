@@ -27,7 +27,7 @@ nerede hata verdiğini tek bakışta görebilirsiniz.
   arasında çizer; diyagram Mermaid olarak kopyalanabilir
 - **Tüm satırların bulunduğu bir konsol**: her istek kendi rengindedir; bir isteğin kimliğine
   tıklamak diğerlerini soluklaştırır
-- **Her Run ve Debug penceresinde bir Trace Tail sekmesi**: yalnızca o uygulamanın katıldığı
+- **Her Run ve Debug penceresinde bir Trace Tail sekmesi**: yalnızca o çalıştırmanın katıldığı
   istekleri gösterir
 - **Jump to Source**: bir log satırından onu yazan sınıfa gider
 - **Uygulamada değişiklik gerekmez**: bir Java agent çalışma anında kendini Logback'e ya da
@@ -43,7 +43,7 @@ nerede hata verdiğini tek bakışta görebilirsiniz.
 Bu deponun bir derlemesini kurmak için ise `buildPlugin` Gradle görevini çalıştırın (Gradle araç
 penceresi → **trace-tail → Tasks → intellij platform → buildPlugin**), ardından **Settings →
 Plugins** içinde dişli simgesine tıklayın, **Install Plugin from Disk…** seçeneğini seçin ve
-`build/distributions/trace-tail-1.3.0.zip` dosyasını gösterin.
+`build/distributions/trace-tail-1.4.0.zip` dosyasını gösterin.
 
 Agent'ın desteklediği log kurulumları için
 [Uygulamanın ihtiyaç duyduğu](#uygulamanın-ihtiyaç-duyduğu) bölümüne bakın.
@@ -57,6 +57,11 @@ Araç penceresinde aynı loglara üç farklı açıdan bakan üç sekme vardır:
 | Tree | Her istek için bir satır; açıldığında adımlarını gösterir. Yanında, seçili satırın JSON'u ve stack trace'i (Line) ile seçili isteğin sequence diyagramı (Sequence) yer alır |
 | Flat | Tüm satırlar geliş sırasına göre, konsol biçiminde; stack trace satırları kaynak koda bağlantı verir |
 | Raw | JSON satırları alındığı haliyle; agent'ın tam olarak ne gönderdiğini görmek için kullanışlıdır |
+
+Her sekmenin durum satırı o sekmenin gösterdiklerini sayar: Tree isteklerini ve satırlarını, Flat ve
+Raw satırlarını. Görünüm duraklatılmışken kaç satırın beklediğini de gösterir. Fareyle üzerine
+gelince alıcının portu, bağlı uygulamalar ve her çalıştırmanın sınırı görünür (bkz.
+[Kaç satır tutulur](#kaç-satır-tutulur)).
 
 ### Tree
 
@@ -106,16 +111,17 @@ alanları taşıdığını kontrol edebilirsiniz.
 
 ### Run ve Debug pencereleri
 
-Her Run veya Debug penceresi de, uygulamasının ilk satırı geldiğinde bir **Trace Tail** sekmesi
-kazanır. Bu sekme yalnızca o uygulamanın katıldığı istekleri, diğer uygulamaların bu istekler için
+Her Run veya Debug penceresi de, çalıştırmasının ilk satırı geldiğinde bir **Trace Tail** sekmesi
+kazanır. Bu sekme yalnızca o çalıştırmanın katıldığı istekleri, diğer uygulamaların bu istekler için
 yazdığı satırlarla birlikte gösterir; yani bir uygulamaya odaklanırken isteğin geri kalanını da
-kaybetmezsiniz. Uygulama, agent'ın `service.name` olarak gönderdiği run configuration adıyla
-eşleştirilir. Düz bir Run konsolu gibi sekmesi olmayan bir run penceresine sekme eklenmez.
+kaybetmezsiniz. Çalıştırma, agent'ın `process.pid` olarak gönderdiği süreç kimliğiyle eşleştirilir;
+böylece aynı run configuration'ın iki çalıştırması kendi isteklerini ayrı ayrı gösterir. Düz bir Run
+konsolu gibi sekmesi olmayan bir run penceresine sekme eklenmez.
 
 ### Araç çubuğu
 
 - görünümü duraklatır; yeni satırlar kaybolmaz, devam ettirilene kadar IDE'de bekler
-- görünümü temizler
+- görünümü temizler: bütün çalıştırmaların bütün satırlarını siler
 - bir uygulama ya da tümü için belirli bir seviyenin altındaki satırları gizler (örneğin yalnızca
   `WARN` ve üstü). Bir isteğin ana adımı, yani başka hiçbir adımın başlatmadığı adım, `START` ve
   `END` satırlarını korur; böylece görünmeye devam eden bir istek ilk satırını da korur.
@@ -173,6 +179,7 @@ Agent, Logback'e `logback.statusListenerClass` sistem özelliği üzerinden bağ
 | Alan | Kullanım |
 |---|---|
 | `@timestamp`, `log.level`, `message`, `service.name` | Her satırda bulunur |
+| `process.pid` | Çalıştırmaları birbirinden ayırır; bkz. [Kaç satır tutulur](#kaç-satır-tutulur) |
 | `trace.id`, `span.id` | Satırları isteğe göre gruplar; `trace.id`'si olmayan bir satır yalnızca Flat ve Raw sekmelerinde görünür |
 | `parent.id` | Bir adımı, onu başlatan adımın altına yerleştirir |
 | `event.action` | Olayın adı, örneğin `HTTP_IN`; bu alanı olmayan bir satır onun yerine mesajını gösterir |
@@ -182,15 +189,45 @@ Agent, Logback'e `logback.statusListenerClass` sistem özelliği üzerinden bağ
 Bir adımın satırı, sonucunu (`outcome`, `status`) ve `START` ile `END` arasında geçen süreyi
 gösterir. Diğer tüm alanlar `anahtar=değer` olarak gösterilir.
 
-Eklenti son 10.000 satırı bellekte tutar; böylece seviye filtresi değiştirildiğinde yeni filtre
-yalnızca yeni gelen satırlara değil, bu satırlara da uygulanır.
+## Kaç satır tutulur
 
-Tree son 300 isteği, toplamda en fazla 100.000 satırla tutar; durum satırı kaç satır tuttuğunu
-gösterir. Bir istek en fazla 5.000 satır tutar; bunu geçince en eski satırlarını onda birlik
-parçalar halinde atar. Önce adımların içindeki
-satırlar atılır, en yeni 500 satır hariç; böylece her adım `START` ve `END` satırlarını korur. Bu
-yetmezse en eski bitmiş adımlar atılır. İsteğin satırı bundan sonra kaç satır atıldığını gösterir;
-`WARN` ve `ERROR` sayıları atılan satırları da içerir.
+### Her çalıştırmanın sınırı
+
+Her çalıştırma, yani IDE'den başlatılan her süreç, Run konsolunun tutacağı kadar metin tutar:
+**Settings | Editor | General | Console** altındaki sınır; değiştirilmediyse 1.024 KB. Varsayılan
+ayar yeterlidir. Sayılan metin, satırın Flat sekmesinde kapladığı metindir; stack trace'i de
+dahildir. Seviye filtresinin gizlediği satırlar da sayılır: filtre değişince yeniden görünsünler diye
+tutulurlar. Konsol her şeyi tutacak şekilde ayarlıysa bir çalıştırma 20.000 KB tutar. Ayar her
+güncellemede yeniden okunur; değişiklik için yeniden başlatmak gerekmez.
+
+Bir çalıştırma sınırını aşınca en eski satırı silinir:
+
+- Satır bir isteğe aitse isteğin tamamı silinir: her uygulamanın o istek için yazdığı satırlar, üç
+  sekmeden birden.
+- Değilse yalnızca o satır silinir.
+
+Son 30 saniyede satır almış bir istek hâlâ sürüyordur; bu yüzden yalnızca en eski satırları silinir.
+Tree'deki satırında bundan sonra *older lines dropped* yazar.
+
+Bütün çalıştırmalar birlikte en fazla 50.000 satır tutar. Bunu geçince en çok satır tutan
+çalıştırmanın en eski isteği aynı kurallarla silinir. Durum satırında bundan sonra *limit reached*
+yazar; ipucu hangi uygulamanın satırlarının silindiğini söyler.
+
+Bir istek Tree'de en fazla 5.000 satır tutar; bunu geçince en eski satırlarını orada onda birlik
+parçalar halinde atar. Önce adımların içindeki satırlar atılır, en yeni 500 satır hariç; böylece her
+adım `START` ve `END` satırlarını korur. Bu yetmezse en eski bitmiş adımlar atılır. İsteğin satırında
+bundan sonra *older lines dropped* yazar; `WARN` ve `ERROR` sayıları atılan satırları da içerir.
+
+### Rerun, sekmeyi kapatma ve Clear All
+
+- **Rerun** çalıştırmanın sekmesini yeniden kullandığında ve bir Run ya da Debug sekmesi
+  **kapatıldığında** yalnızca o çalıştırmanın satırları silinir; diğer çalıştırmaların aynı istekler
+  için yazdığı satırlar kalır. Eski çalıştırmanın hâlâ gönderdiği satırlar da, görünüm
+  duraklatılmışken gönderdikleri de atılır.
+- Çalıştırmanın konsolunda **Clear All**, o çalıştırmanın o ana kadar gönderdiği satırları siler.
+  Sonra gönderdikleri her zamanki gibi gelir.
+- **Stop** hiçbir şey silmez.
+- Trace Tail araç çubuğundaki **Clear** bütün satırları siler.
 
 Bir uygulamanın loglaması hiçbir zaman IDE'yi beklemez; IDE yavaşlasa ya da kapansa bile uygulama
 yavaşlamaz. Agent kendi thread'inden gönderir ve en fazla 10.000 gönderilmemiş satır tutar; eklenti
@@ -219,7 +256,7 @@ yüklenmez.
 
 Eklentinin testleri, kök projenin `test` görevidir. `src/test/resources/requests` altındaki
 istekler, agent'ın satırlarını gönderdiği biçimde yazılmıştır. Testler bunları görünümün modeline
-okur; adımları, seviye filtresini ve Sequence sekmesinin Mermaid metnini kontrol eder. Bir başka test
+okur; adımları, seviye filtresini, sınırları ve Sequence sekmesinin Mermaid metnini kontrol eder. Bir başka test
 de eklentinin portuna soketlerle satır gönderir.
 
 Agent'ın testleri, `agent` alt projesinin `test` görevidir. Her test, küçük bir uygulamayı

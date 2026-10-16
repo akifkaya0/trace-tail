@@ -25,10 +25,10 @@ class TraceTailServerTest {
                 second.write("b1\n   \nçağrı ışık\n")
                 first.write("a2\n")
                 val lines = take(4)
+                // blank lines are skipped
                 assertEquals(setOf("a1", "a2", "b1", "çağrı ışık"), lines.toSet())
                 assertEquals(listOf("a1", "a2"), lines.filter { it.startsWith("a") })
-                // blank lines are skipped
-                assertEquals(TraceTailServer.Stats(server.port, 2, 4, 0), server.stats())
+                assertEquals(TraceTailServer.Stats(server.port, 2), server.stats())
             }
         }
         waitUntil { server.stats().connections == 0 }
@@ -38,8 +38,7 @@ class TraceTailServerTest {
     fun dropsTheOldestLinesWhileTheViewDoesNotTakeThem() {
         val count = INBOX_CAPACITY + 5_000
         connect().use { it.write((1..count).joinToString("") { i -> "$i\n" }) }
-        waitUntil { server.stats().received == count.toLong() }
-        assertEquals(5_000, server.stats().dropped)
+        waitUntil { server.waiting() == INBOX_CAPACITY && server.stats().connections == 0 }
         assertEquals((5_001..5_010).map(Int::toString), server.drain(10))
         val rest = server.drain(Int.MAX_VALUE)
         assertEquals(INBOX_CAPACITY - 10, rest.size)

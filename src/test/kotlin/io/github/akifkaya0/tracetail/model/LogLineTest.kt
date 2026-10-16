@@ -13,7 +13,7 @@ class LogLineTest {
     @Test
     fun readsTheFieldsThatHaveAPlaceOfTheirOwn() {
         val line = line(
-            """{"@timestamp":"2026-10-07T10:00:00.250Z","log.level":"WARN","message":"Ended with FAILURE","service.name":"stock",""" +
+            """{"@timestamp":"2026-10-07T10:00:00.250Z","log.level":"WARN","message":"Ended with FAILURE","service.name":"stock","process.pid":"4242",""" +
                 """"trace.id":"t-1","span.id":"s-2","parent.id":"s-1","user.id":"u-7","event.action":"METHOD","phase":"END",""" +
                 """"log.logger":"sample.stock.Warehouse",""" +
                 """"error.stack_trace":"java.lang.IllegalStateException: boom\n\tat sample.stock.Warehouse.take(Warehouse.java:42)"}""",
@@ -22,6 +22,7 @@ class LogLineTest {
         assertEquals(Level.WARN, line.level)
         assertEquals("Ended with FAILURE", line.message)
         assertEquals("stock", line.app)
+        assertEquals(4242L, line.pid)
         assertEquals("t-1", line.trace)
         assertEquals("s-2", line.span)
         assertEquals("s-1", line.parent)

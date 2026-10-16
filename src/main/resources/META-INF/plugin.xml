@@ -21,7 +21,7 @@
             <li><b>Flat</b>: every line in arrival order, coloured per request; clicking a request's id
                 fades the others out, and stack trace frames link to the source</li>
             <li><b>Raw</b>: the JSON lines as the agent sent them</li>
-            <li>A <b>Trace Tail</b> tab in each Run and Debug window, showing only the requests that app
+            <li>A <b>Trace Tail</b> tab in each Run and Debug window, showing only the requests that run
                 took part in</li>
             <li><b>Jump to Source</b> (F4) from a log line to the class that wrote it</li>
             <li>A level filter per app, pause, Scroll to the End and Soft-Wrap</li>
@@ -42,6 +42,23 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p><b>1.4.0</b></p>
+        <ul>
+            <li>Each run keeps as much text as its console would (Settings | Editor | General |
+                Console); past that, its oldest request goes, from every app and all three tabs. A
+                request that got a line in the last 30 seconds loses only its oldest lines</li>
+            <li>All runs together keep at most 50,000 lines; past that, the run with the most lines
+                loses its oldest request</li>
+            <li>A changed level filter no longer shrinks the Tree</li>
+            <li>Rerun, closing a Run or Debug tab and Clear All in a run's console delete that run's
+                lines; the other runs' lines of the same requests stay</li>
+            <li>The agent sends the process id; the Run window's Trace Tail tab shows the requests of
+                its run, so two runs of one configuration are told apart</li>
+            <li>Flat and Raw are editors: lines can go from anywhere while the lines being read stay
+                in place</li>
+            <li>Each tab's status line counts what it shows; the port, the apps and the limit are in
+                its tooltip</li>
+        </ul>
         <p><b>1.3.0</b></p>
         <ul>
             <li>Sequence draws LDAP_OUT calls to an ldap lifeline and MAIL_OUT calls to a mail

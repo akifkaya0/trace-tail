@@ -41,10 +41,12 @@ final class AppRun {
 
     final List<Map<String, String>> lines;
     final String console;
+    final long pid;
 
-    private AppRun(List<Map<String, String>> lines, String console) {
+    private AppRun(List<Map<String, String>> lines, String console, long pid) {
         this.lines = lines;
         this.console = console;
+        this.pid = pid;
     }
 
     /** A run that the tests of a setup share, since each run starts a JVM. */
@@ -80,7 +82,7 @@ final class AppRun {
             assertTrue(exited, "the application did not exit; it printed:\n" + console);
             assertEquals(0, process.exitValue(), "the application failed; it printed:\n" + console);
             assertFalse(lines.isEmpty(), "the agent sent nothing; the application printed:\n" + console);
-            return new AppRun(lines, console);
+            return new AppRun(lines, console, process.pid());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } catch (InterruptedException e) {

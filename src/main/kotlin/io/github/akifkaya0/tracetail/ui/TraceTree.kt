@@ -235,8 +235,9 @@ internal class TraceTree(
     }
 
     fun apply(change: Change) {
-        val changed = change.changed.filter(include)
-        if (!change.reset && changed.isEmpty() && change.removed.isEmpty()) return
+        // a request that lost a run's lines may no longer be one this tree shows
+        val (changed, left) = change.changed.partition(include)
+        if (!change.reset && changed.isEmpty() && change.removed.isEmpty() && left.none { it.id in ui }) return
         val follow = atBottom()
         if (change.reset) {
             val old = HashMap(ui)
@@ -247,7 +248,7 @@ internal class TraceTree(
                 ui[trace.id] = u
             }
         } else {
-            for (trace in change.removed) ui.remove(trace.id)
+            for (trace in change.removed + left) ui.remove(trace.id)
             for (trace in changed) ui.getOrPut(trace.id) { TraceUi() }
         }
         changed.forEach(::rebuild)
@@ -323,7 +324,7 @@ internal class TraceTree(
         val shape = b.shape
         val parts = ArrayList<Part>()
         parts += Palette.plural(if (group) trace.lines.size else trace.blockCount(s!!, shape), "line") to Palette.GRAY
-        if (group && trace.dropped > 0) parts += "${trace.dropped} older dropped" to Palette.GRAY
+        if (group && trace.partial) parts += "older lines dropped" to Palette.GRAY
         if (s != null) {
             val end = s.end
             when {
