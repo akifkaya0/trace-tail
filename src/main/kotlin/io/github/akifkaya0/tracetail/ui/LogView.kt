@@ -272,7 +272,10 @@ internal class LogView(
                     keptText.append(text, s, s + e.length)
                 }
             }
-            removeMarkers(start, end, ours)
+            val (styledFrom, styledTo) = removeMarkers(start, end, ours)
+            // a style runs over the lines around the span too, which lose it with the span's
+            val restyleFrom = if (styledFrom < start) indexAt(styledFrom) else from
+            val restyleTo = if (styledTo >= end) indexAt(styledTo) + 1 else to
             entries.subList(from, to).clear()
             entries.addAll(from, kept)
             validTo = minOf(validTo, from)
@@ -282,6 +285,7 @@ internal class LogView(
                 newTop >= 0 -> newTop
                 else -> top
             }
+            markStyles(restyleFrom, restyleTo - (to - from - kept.size))
             putBackMarkers(from, from + kept.size)
             goneEntries += to - from - kept.size
             a = b + 1
@@ -295,12 +299,21 @@ internal class LogView(
         }
     }
 
-    /** Takes out this view's styles, links and fold regions in [start, end), before the text there is replaced. */
-    private fun removeMarkers(start: Int, end: Int, ours: Set<RangeHighlighter>) {
+    /**
+     * Takes out this view's styles, links and fold regions in [start, end), before the text there is
+     * replaced. Returns where the styles taken out started and ended, which may be outside the range.
+     */
+    private fun removeMarkers(start: Int, end: Int, ours: Set<RangeHighlighter>): Pair<Int, Int> {
         val markup = editor.markupModel
         val doomed = ArrayList<RangeHighlighterEx>()
+        var styledFrom = start
+        var styledTo = start
         // the end is the start of the next line, whose markers stay
         markup.processRangeHighlightersOverlappingWith(start, end - 1) { h ->
+            if (h in ours) {
+                styledFrom = minOf(styledFrom, h.startOffset)
+                styledTo = maxOf(styledTo, h.endOffset)
+            }
             if (h in ours || h.layer == HighlighterLayer.CONSOLE_FILTER || EditorHyperlinkSupport.getHyperlinkInfo(h) != null) doomed += h
             true
         }
@@ -308,11 +321,12 @@ internal class LogView(
         val folding = editor.foldingModel
         val regions = folding.allFoldRegions.filter { it.startOffset < end && it.endOffset > start }
         if (regions.isNotEmpty()) folding.runBatchFoldingOperation { regions.forEach(folding::removeFoldRegion) }
+        return styledFrom to styledTo
     }
 
+    /** Puts back the fold regions and links of the entries in [from, to); their styles are marked apart. */
     private fun putBackMarkers(from: Int, to: Int) {
         if (from == to) return
-        markStyles(from, to)
         addFolds(from, to)
         for (i in from until to) addLinks(i)
     }

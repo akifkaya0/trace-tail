@@ -56,7 +56,11 @@ class TraceModel(
 
         fun finish(): Change {
             if (gone.isNotEmpty()) {
-                runs.values.forEach { run -> run.lines.removeIf { it.seq in gone } }
+                for (run in runs.values) {
+                    // the oldest lines go most often; a run's other deleted lines, such as a whole request's, need a pass
+                    while (run.lines.firstOrNull()?.let { it.seq in gone } == true) run.lines.removeFirst()
+                    if (run.lines.size > run.count) run.lines.removeIf { it.seq in gone }
+                }
                 runs.values.removeIf { it.count == 0 }
                 for (id in touched) {
                     requests[id]?.let { kept ->

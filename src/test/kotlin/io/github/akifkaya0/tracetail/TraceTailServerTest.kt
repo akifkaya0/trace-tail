@@ -1,5 +1,6 @@
 package io.github.akifkaya0.tracetail
 
+import io.github.akifkaya0.tracetail.model.LogLine
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -21,13 +22,15 @@ class TraceTailServerTest {
     fun readsTheLinesOfEveryConnection() {
         connect().use { first ->
             connect().use { second ->
-                first.write("a1\n\n")
-                second.write("b1\n   \nçağrı ışık\n")
-                first.write("a2\n")
+                first.write(json("a1") + "\n")
+                second.write(json("b1") + "   \nnot json\n" + json("çağrı ışık"))
+                first.write(json("a2"))
                 val lines = take(4)
-                // blank lines are skipped
-                assertEquals(setOf("a1", "a2", "b1", "çağrı ışık"), lines.toSet())
-                assertEquals(listOf("a1", "a2"), lines.filter { it.startsWith("a") })
+                // blank lines and lines that are not JSON objects are skipped
+                assertEquals(setOf("a1", "a2", "b1", "çağrı ışık"), lines.map { it.message }.toSet())
+                assertEquals(listOf("a1", "a2"), lines.map { it.message }.filter { it.startsWith("a") })
+                // the views find lines by their numbers, which follow the order they are taken in
+                assertEquals(lines.map { it.seq }.sorted(), lines.map { it.seq })
                 assertEquals(TraceTailServer.Stats(server.port, 2), server.stats())
             }
         }
@@ -37,19 +40,19 @@ class TraceTailServerTest {
     @Test
     fun dropsTheOldestLinesWhileTheViewDoesNotTakeThem() {
         val count = INBOX_CAPACITY + 5_000
-        connect().use { it.write((1..count).joinToString("") { i -> "$i\n" }) }
+        connect().use { it.write((1..count).joinToString("") { i -> json("$i") }) }
         waitUntil { server.waiting() == INBOX_CAPACITY && server.stats().connections == 0 }
-        assertEquals((5_001..5_010).map(Int::toString), server.drain(10))
+        assertEquals((5_001..5_010).map(Int::toString), server.drain(10).map { it.message })
         val rest = server.drain(Int.MAX_VALUE)
         assertEquals(INBOX_CAPACITY - 10, rest.size)
-        assertEquals(count.toString(), rest.last())
-        assertEquals(emptyList<String>(), server.drain(10))
+        assertEquals(count.toString(), rest.last().message)
+        assertEquals(emptyList<LogLine>(), server.drain(10))
     }
 
     @Test
     fun closesItsPortAndConnectionsOnDispose() {
         connect().use { socket ->
-            socket.write("a1\n")
+            socket.write(json("a1"))
             take(1)
             server.dispose()
             assertEquals(-1, socket.getInputStream().read())
@@ -61,9 +64,12 @@ class TraceTailServerTest {
 
     private fun Socket.write(text: String) = getOutputStream().write(text.toByteArray())
 
+    /** A line as the agent writes it, with only a message. */
+    private fun json(message: String) = "{\"message\":\"$message\"}\n"
+
     /** Takes [count] lines from the server as they arrive. */
-    private fun take(count: Int): List<String> {
-        val lines = ArrayList<String>()
+    private fun take(count: Int): List<LogLine> {
+        val lines = ArrayList<LogLine>()
         waitUntil {
             lines += server.drain(count - lines.size)
             lines.size == count

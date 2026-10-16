@@ -98,7 +98,8 @@ internal class TextCell(
             val fm = table.getFontMetrics(f)
             g?.font = f
             g?.color = attributes.fgColor ?: foreground0 ?: table.foreground
-            for (token in text.split(WORD_END)) {
+            // only wrapping needs the words; one string draws much faster than its words one by one
+            for (token in if (wrap) text.split(WORD_END) else listOf(text)) {
                 if (token.isEmpty()) continue
                 var rest = token
                 while (rest.isNotEmpty()) {
@@ -130,9 +131,19 @@ internal class TextCell(
 
     private fun baseline(line: Int, fm: java.awt.FontMetrics) = vpad() + line * lineHeight + (lineHeight - fm.height) / 2 + fm.ascent
 
+    /** The bold and italic fonts, by style, made once per table font: every cell painted asks for them. */
+    private val styled = arrayOfNulls<Font>(4)
+    private var styledFrom: Font? = null
+
     private fun fontFor(attributes: SimpleTextAttributes): Font {
         val style = (if (attributes.style and SimpleTextAttributes.STYLE_BOLD != 0) Font.BOLD else 0) or (if (attributes.style and SimpleTextAttributes.STYLE_ITALIC != 0) Font.ITALIC else 0)
-        return if (style == 0) table.font else table.font.deriveFont(style)
+        val base = table.font
+        if (style == 0) return base
+        if (styledFrom !== base) {
+            styledFrom = base
+            styled.fill(null)
+        }
+        return styled[style] ?: base.deriveFont(style).also { styled[style] = it }
     }
 
     companion object {

@@ -28,6 +28,7 @@ import io.github.akifkaya0.tracetail.model.Step
 import io.github.akifkaya0.tracetail.model.Trace
 import io.github.akifkaya0.tracetail.model.TraceModel
 import java.awt.BorderLayout
+import java.awt.Point
 import java.awt.Rectangle
 import java.awt.datatransfer.StringSelection
 import java.awt.event.ActionEvent
@@ -256,9 +257,17 @@ internal class TraceTree(
         if (follow && changed.isNotEmpty()) scrollToBottom()
     }
 
-    /** Redraws the requests with running steps, whose times keep growing. */
+    /**
+     * Redraws the requests in view with running steps, whose times keep growing. A burst can leave
+     * thousands running; those out of view catch up when they change or come into view.
+     */
     fun refreshRunning() {
-        val running = ui.filterValues { it.wasRunning }.keys.mapNotNull { model.traces[it] }
+        val area = table.visibleRect
+        val first = table.rowAtPoint(Point(0, area.y))
+        if (first < 0) return
+        val last = table.rowAtPoint(Point(0, area.y + area.height - 1)).takeIf { it >= 0 } ?: visible.lastIndex
+        val running = (first..last).mapTo(LinkedHashSet()) { visible[it].traceId }
+            .filter { ui[it]?.wasRunning == true }.mapNotNull { model.traces[it] }
         if (running.isEmpty()) return
         running.forEach(::rebuild)
         refresh()

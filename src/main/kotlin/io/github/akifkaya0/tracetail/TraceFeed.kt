@@ -9,7 +9,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import io.github.akifkaya0.tracetail.model.Change
 import io.github.akifkaya0.tracetail.model.Level
-import io.github.akifkaya0.tracetail.model.LogLine
 import io.github.akifkaya0.tracetail.model.TraceModel
 import io.github.akifkaya0.tracetail.ui.FlatConsole
 import javax.swing.Timer
@@ -78,8 +77,7 @@ class TraceFeed(project: Project) : Disposable {
         if (!paused) {
             val started = System.nanoTime()
             val drained = server.drain(pull)
-            val lines = drained.mapNotNull(LogLine::parse)
-            if (lines.isNotEmpty()) publish(model.add(lines))
+            if (drained.isNotEmpty()) publish(model.add(drained))
             // the rest waits in the receiver, so the IDE stays responsive however fast the apps log
             val millis = maxOf((System.nanoTime() - started) / 1_000_000, 1)
             if (drained.size == pull || millis > TICK_BUDGET_MILLIS) {
@@ -99,7 +97,7 @@ class TraceFeed(project: Project) : Disposable {
         const val TICK_MILLIS = 250
         private const val PULL_MAX = 2_000
         private const val PULL_MIN = 100
-        private const val TICK_BUDGET_MILLIS = 50L
+        private const val TICK_BUDGET_MILLIS = 25L
         private const val SOFT_WRAPS_KEY = "tracetail.softWraps"
         private const val NO_LIMIT_KB = 20_000L
 

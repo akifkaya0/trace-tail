@@ -26,8 +26,7 @@ enum class Phase { START, END }
 
 /** One received log line: an ECS JSON object, read into the fields the view works with. */
 class LogLine(
-    /** Unique per received line; a line moved under another step keeps it. */
-    val seq: Long,
+    seq: Long,
     val time: Long,
     val level: Level,
     val app: String,
@@ -52,6 +51,13 @@ class LogLine(
 
     /** The event's name, or the message for a line without one, such as a library's own log. */
     val title: String get() = event ?: message
+
+    /**
+     * Unique per received line, in the order the lines reach the views, whose searches rely on it;
+     * a line moved under another step keeps it. The receiver numbers the lines again as it queues them.
+     */
+    var seq = seq
+        internal set
 
     /** The text the line takes in the Flat tab, which its run's limit counts; set by [TraceModel]. */
     var size = 0
@@ -80,6 +86,8 @@ class LogLine(
         private val PRETTY = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
         private val counter = AtomicLong()
 
+        internal fun nextSeq(): Long = counter.incrementAndGet()
+
         /** Reads one line, or returns null when it is not a JSON object. */
         fun parse(text: String): LogLine? {
             val o = try {
@@ -95,7 +103,7 @@ class LogLine(
                 if (key !in OWN_FIELDS && !value.isJsonNull) fields[key] = value.text()
             }
             return LogLine(
-                seq = counter.incrementAndGet(),
+                seq = nextSeq(),
                 time = str("@timestamp")?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
                     ?: System.currentTimeMillis(),
                 level = Level.of(str("log.level")),

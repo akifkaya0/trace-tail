@@ -2,6 +2,7 @@ package io.github.akifkaya0.tracetail
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
+import io.github.akifkaya0.tracetail.model.LogLine
 import java.io.IOException
 import java.net.InetAddress
 import java.net.ServerSocket
@@ -11,7 +12,8 @@ import kotlin.concurrent.thread
 
 /**
  * Receives the logs of the applications started from this project. Each application connects to a
- * loopback port and writes one JSON object per line.
+ * loopback port and writes one JSON object per line. The connection's thread reads each line into a
+ * [LogLine], so the UI thread only takes them; a line that is not a JSON object is skipped.
  *
  * Reading never waits on the IDE. Each connection has its own thread that only appends to a bounded
  * inbox, and a full inbox drops its oldest line. A slow or closed view therefore cannot make an
@@ -22,7 +24,7 @@ class TraceTailServer : Disposable {
 
     private val server = ServerSocket(0, 50, InetAddress.getLoopbackAddress())
     private val connections = ConcurrentHashMap.newKeySet<Socket>()
-    private val inbox = ArrayDeque<String>()   // guarded by itself
+    private val inbox = ArrayDeque<LogLine>()   // guarded by itself
 
     val port: Int get() = server.localPort
 
@@ -31,7 +33,7 @@ class TraceTailServer : Disposable {
     }
 
     /** Takes up to [max] of the waiting lines, oldest first. */
-    fun drain(max: Int): List<String> = synchronized(inbox) { List(minOf(max, inbox.size)) { inbox.removeFirst() } }
+    fun drain(max: Int): List<LogLine> = synchronized(inbox) { List(minOf(max, inbox.size)) { inbox.removeFirst() } }
 
     /** The lines waiting to be taken. */
     fun waiting(): Int = synchronized(inbox) { inbox.size }
@@ -52,7 +54,7 @@ class TraceTailServer : Disposable {
 
     private fun read(socket: Socket) {
         try {
-            socket.getInputStream().bufferedReader().forEachLine { if (it.isNotBlank()) offer(it) }
+            socket.getInputStream().bufferedReader().forEachLine { if (it.isNotBlank()) LogLine.parse(it)?.let(::offer) }
         } catch (_: IOException) {
             // The application stopped or the project is closing.
         } finally {
@@ -61,8 +63,10 @@ class TraceTailServer : Disposable {
         }
     }
 
-    private fun offer(line: String) {
+    private fun offer(line: LogLine) {
         synchronized(inbox) {
+            // numbered here, so the numbers follow the inbox's order whichever connection read first
+            line.seq = LogLine.nextSeq()
             if (inbox.size == INBOX_CAPACITY) {
                 inbox.removeFirst()
             }

@@ -110,5 +110,6 @@ internal object Palette {
         }
     }
 
-    fun plural(n: Int, one: String) = String.format(Locale.ROOT, "%,d %s", n, one) + if (n == 1) "" else "s"
+    // most counts are small, and String.format is slow on the many rows the tree builds
+    fun plural(n: Int, one: String) = (if (n in 0..999) n.toString() else String.format(Locale.ROOT, "%,d", n)) + " " + one + if (n == 1) "" else "s"
 }
