@@ -7,6 +7,7 @@ import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.process.BaseProcessHandler
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.runners.ExecutionEnvironment
+import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.RunContentDescriptor
 import com.intellij.execution.ui.RunContentManager
 import com.intellij.execution.ui.RunContentWithExecutorListener
@@ -14,7 +15,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
-import com.intellij.openapi.actionSystem.LangDataKeys
+import com.intellij.openapi.actionSystem.DataKey
 import com.intellij.openapi.actionSystem.ex.AnActionListener
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
@@ -68,8 +69,8 @@ class TraceTailRunTabs(private val project: Project) : Disposable {
         ApplicationManager.getApplication().messageBus.connect(this).subscribe(AnActionListener.TOPIC, object : AnActionListener {
             override fun beforeActionPerformed(action: AnAction, event: AnActionEvent) {
                 if (action !is ClearConsoleAction) return
-                val console = event.getData(LangDataKeys.CONSOLE_VIEW) ?: return
-                val descriptor = event.getData(LangDataKeys.RUN_CONTENT_DESCRIPTOR) ?: return
+                val console = event.getData(CONSOLE_VIEW) ?: return
+                val descriptor = event.getData(RUN_CONTENT_DESCRIPTOR) ?: return
                 // only the run's own console: the Trace Tail tab's consoles are in the same window
                 val own = descriptor.executionConsole?.component ?: return
                 if (SwingUtilities.isDescendingFrom(console.component, own)) descriptor.processHandler?.pid()?.let { feed.removeRun(it, ends = false) }
@@ -111,6 +112,10 @@ class TraceTailRunTabs(private val project: Project) : Disposable {
     private companion object {
         const val CONTENT_ID = "TraceTail"
         val ICON = IconLoader.getIcon("/icons/traceTail.svg", TraceTailRunTabs::class.java)
+
+        // LangDataKeys' are deprecated in 263 for ExecutionDataKeys', which 262 lacks; the same name gives the same key.
+        val CONSOLE_VIEW = DataKey.create<ConsoleView>("consoleView")
+        val RUN_CONTENT_DESCRIPTOR = DataKey.create<RunContentDescriptor>("RUN_CONTENT_DESCRIPTOR")
 
         /** The process id of a run started on this computer; the agent sends the same. */
         fun ProcessHandler.pid(): Long? = (this as? BaseProcessHandler<*>)?.process?.let { runCatching { it.pid() }.getOrNull() }

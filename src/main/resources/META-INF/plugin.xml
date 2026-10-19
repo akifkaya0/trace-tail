@@ -42,6 +42,10 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p><b>1.4.1</b></p>
+        <ul>
+            <li>Replaces the deprecated and internal IntelliJ API that IntelliJ IDEA 2026.3 warns about</li>
+        </ul>
         <p><b>1.4.0</b></p>
         <ul>
             <li>Each run keeps as much text as its console would (Settings | Editor | General |

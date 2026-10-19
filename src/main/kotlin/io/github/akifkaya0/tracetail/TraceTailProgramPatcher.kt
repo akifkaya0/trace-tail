@@ -5,7 +5,7 @@ import com.intellij.execution.configurations.JavaParameters
 import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.configurations.RunProfile
 import com.intellij.execution.runners.JavaProgramPatcher
-import com.intellij.ide.plugins.PluginManager
+import com.intellij.ide.plugins.cl.PluginAwareClassLoader
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
 import java.nio.file.Files
@@ -31,7 +31,8 @@ class TraceTailProgramPatcher : JavaProgramPatcher() {
 
         /** The build puts the agent beside the plugin's jars, in its own folder. */
         val agentJar: Path? by lazy {
-            val jar = PluginManager.getPluginByClass(TraceTailProgramPatcher::class.java)?.pluginPath?.resolve("agent/trace-tail-agent.jar")
+            val plugin = (TraceTailProgramPatcher::class.java.classLoader as? PluginAwareClassLoader)?.pluginDescriptor
+            val jar = plugin?.pluginPath?.resolve("agent/trace-tail-agent.jar")
             if (jar == null || !Files.isRegularFile(jar)) {
                 LOG.warn("Trace Tail agent not found at $jar; applications will not send their logs")
                 null
