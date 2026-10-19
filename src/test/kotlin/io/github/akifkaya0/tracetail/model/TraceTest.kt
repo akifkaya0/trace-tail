@@ -101,7 +101,6 @@ class TraceTest {
         // a tenth goes at once, so the next lines do not trim again
         val kept = Trace.LINES_MAX - Trace.LINES_MAX / 10
         assertEquals(kept, trace.lines.size)
-        assertEquals(Trace.LINES_MAX + 1 - kept, trace.dropped)
         assertTrue(trace.partial)
         assertEquals("Started", trace.lines.first().message)
         assertEquals("rate ${Trace.LINES_MAX - kept + 1}", trace.lines[1].message)
@@ -116,7 +115,6 @@ class TraceTest {
     fun dropsTheOldestFinishedStepsOfARequestOfStepsAlone() {
         val trace = jobOfSteps(2_500)
         // 5,001 lines are 501 too many: 251 steps go, START and END together
-        assertEquals(502, trace.dropped)
         assertEquals(4_499, trace.lines.size)
         // the main step, which the others hang under, stays
         assertEquals(listOf("j0", "j252"), trace.steps.keys.take(2))
@@ -130,7 +128,7 @@ class TraceTest {
         trace.add(methodLine(2_500, "START"))
         // the warning is the only line inside a step, but it is new: 251 old steps go instead
         assertEquals("No rate", trace.steps.getValue("j0").notes.single().message)
-        assertEquals(502, trace.dropped)
+        assertEquals(4_499, trace.lines.size)
     }
 
     @Test

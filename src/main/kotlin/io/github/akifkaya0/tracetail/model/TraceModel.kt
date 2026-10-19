@@ -165,7 +165,7 @@ class TraceModel(
             kept++
             line.trace?.let { id -> requests.getOrPut(id) { Kept() }.also { it.lines += line; it.last = now } }
             take(line, update.changed)?.let { update.admitted += it }
-            while (run.size > limit && trim(run, now, update)) Unit
+            while (run.size > limit && trim(run, now, update)) {}
             while (kept > LINES_MAX) {
                 val biggest = runs.values.maxBy { it.count }
                 capped = biggest.app

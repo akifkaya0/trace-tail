@@ -37,8 +37,6 @@ class Trace(val id: String) {
     /** The lines dropped to keep the request within [LINES_MAX]; the Flat tab still shows them. */
     private val trimmed = ArrayList<LogLine>()
 
-    val dropped: Int get() = trimmed.size
-
     /** Its oldest lines are gone: dropped to keep it within [LINES_MAX], or deleted to keep a run within its limit. */
     var partial = false
 
@@ -76,7 +74,7 @@ class Trace(val id: String) {
     private fun place(line: LogLine) {
         lines += line
         tally(line)
-        val s =steps.getOrPut(line.span) { Step(line.span).also { it.start = line.time; it.app = line.app } }
+        val s = steps.getOrPut(line.span) { Step(line.span).also { it.start = line.time; it.app = line.app } }
         when (line.phase) {
             Phase.START -> {
                 s.start = line.time
