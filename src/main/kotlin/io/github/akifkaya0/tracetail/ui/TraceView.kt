@@ -31,9 +31,9 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 
 /**
- * The requests, one row each. Beside them, in tabs: the selected requests open into their steps
- * (Steps), the selected lines' JSON and stack traces (Line), and the selected requests as sequence
- * diagrams, one under the other (Sequence).
+ * The requests, one row each. Beside them, in tabs: the selected requests open into their steps,
+ * with the selected lines' JSON and stack traces on their right (Steps), and the selected requests
+ * as sequence diagrams, one under the other (Sequence).
  */
 class TraceView(
     project: Project,
@@ -52,11 +52,14 @@ class TraceView(
     private val steps = TraceTree(project, feed.model, { it.id in selected }, ::selectLines, showInFlat, steps = true)
     private var ticks = 0
 
-    val component: JComponent = OnePixelSplitter(false, 0.6f).apply {
+    // the IDE remembers where the dividers were dragged, for this view and every one opened later
+    val component: JComponent = OnePixelSplitter(false, "tracetail.requestsSplit", 0.4f).apply {
         firstComponent = requests.component
         secondComponent = JBTabbedPane().apply {
-            addTab("Steps", steps.component)
-            addTab("Line", details.component)
+            addTab("Steps", OnePixelSplitter(false, "tracetail.stepsSplit", 0.6f).apply {
+                firstComponent = steps.component
+                secondComponent = details.component
+            })
             addTab("Sequence", sequenceTab())
         }
     }
@@ -153,7 +156,7 @@ class TraceView(
         if (ids != shownIds()) showSequences(ids)
     }
 
-    /** Line shows the lines selected in Steps, or with none, the rows selected in the requests. */
+    /** Beside the steps, the JSON of the lines selected in Steps, or with none, of the rows selected in the requests. */
     private fun selectLines(lines: List<LogLine>) {
         details.clear()
         lines.ifEmpty { requests.selectedLines() }.forEachIndexed { i, line ->

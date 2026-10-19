@@ -38,7 +38,7 @@ you can see at a glance which steps it took, which step started which, and where
 To install a build of this repository instead, run the `buildPlugin` Gradle task (Gradle tool
 window → **trace-tail → Tasks → intellij platform → buildPlugin**), then in **Settings → Plugins**
 click the gear icon, choose **Install Plugin from Disk…** and select
-`build/distributions/trace-tail-1.4.1.zip`.
+`build/distributions/trace-tail-1.5.0.zip`.
 
 See [What the application needs](#what-the-application-needs) for the logging setups the agent
 supports.
@@ -49,7 +49,7 @@ The tool window has three tabs that look at the same logs from three angles:
 
 | Tab | Shows |
 |---|---|
-| Tree | One row per request. Beside it, the selected request's steps (Steps), the selected line's JSON and stack trace (Line) and the selected request as a sequence diagram (Sequence) |
+| Tree | One row per request. Beside it, the selected request's steps with the selected line's JSON and stack trace on their right (Steps), and the selected request as a sequence diagram (Sequence) |
 | Flat | Every line in arrival order, as a console; stack trace frames link to the source |
 | Raw | The JSON lines as received; useful to see exactly what the agent sent |
 
@@ -63,12 +63,15 @@ it shows the receiver's port, the connected apps and the limit of each run (see
 Each request is one row: its first line, then how many lines it has, its outcome and duration, how
 many `WARN` and `ERROR` lines it has, and how many of its steps have no `END` line yet. Selecting
 a row opens the request in **Steps** beside it: its lines, each step under the step that started
-it. A step folds with its arrow, a double click, or the Left and Right keys. Only the selected
-requests are laid out line by line, so long requests do not slow the list down.
+it, and on their right the JSON and stack trace of the line selected there, or with none, of the
+request's first line. A step folds with its arrow, a double click, or the Left and Right keys.
+Only the selected requests are laid out line by line, so long requests do not slow the list down.
+The IDE remembers where the dividers were dragged, and the Trace Tail tabs of later runs open the
+same way.
 
-Shift and Ctrl select several requests; Steps then shows them one under the other, and Sequence
-draws each of them. **Line** shows the JSON of the lines selected in Steps, or with none, of the
-selected requests' first lines. **Ctrl+C** copies the request ids of the selected rows, one per line.
+Shift and Ctrl select several rows: several requests show one under the other in Steps, and
+Sequence draws each of them; several lines in Steps show their JSON one under the other.
+**Ctrl+C** copies the request ids of the selected rows, one per line.
 **Show in Flat** in the context menu opens the Flat tab on the line, with its request focused.
 
 **F4** or **Jump to Source** in the context menu opens the class that wrote the line

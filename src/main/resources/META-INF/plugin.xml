@@ -45,7 +45,10 @@
         <p><b>1.5.0</b></p>
         <ul>
             <li>The Tree lists each request as one row; selecting it opens its steps in a new Steps tab
-                beside it, next to Line and Sequence</li>
+                beside it. The selected line's JSON and stack trace, which had a Line tab, show on the
+                steps' right</li>
+            <li>The IDE remembers where the Tree's dividers were dragged, and the Run windows' Trace Tail
+                tabs open the same way</li>
             <li>Only the selected requests are laid out line by line: a request no longer lays out all
                 its lines again each time one arrives, so long requests no longer slow the Tree down</li>
             <li>Expand All and Collapse All act on Steps; Collapse All keeps each request open on its

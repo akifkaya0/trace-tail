@@ -43,7 +43,7 @@ nerede hata verdiğini tek bakışta görebilirsiniz.
 Bu deponun bir derlemesini kurmak için ise `buildPlugin` Gradle görevini çalıştırın (Gradle araç
 penceresi → **trace-tail → Tasks → intellij platform → buildPlugin**), ardından **Settings →
 Plugins** içinde dişli simgesine tıklayın, **Install Plugin from Disk…** seçeneğini seçin ve
-`build/distributions/trace-tail-1.4.1.zip` dosyasını gösterin.
+`build/distributions/trace-tail-1.5.0.zip` dosyasını gösterin.
 
 Agent'ın desteklediği log kurulumları için
 [Uygulamanın ihtiyaç duyduğu](#uygulamanın-ihtiyaç-duyduğu) bölümüne bakın.
@@ -54,7 +54,7 @@ Araç penceresinde aynı loglara üç farklı açıdan bakan üç sekme vardır:
 
 | Sekme | Gösterdiği |
 |---|---|
-| Tree | Her istek için bir satır. Yanında, seçili isteğin adımları (Steps), seçili satırın JSON'u ve stack trace'i (Line) ile seçili isteğin sequence diyagramı (Sequence) yer alır |
+| Tree | Her istek için bir satır. Yanında, seçili isteğin adımları ve onların sağında seçili satırın JSON'u ile stack trace'i (Steps), bir de seçili isteğin sequence diyagramı (Sequence) yer alır |
 | Flat | Tüm satırlar geliş sırasına göre, konsol biçiminde; stack trace satırları kaynak koda bağlantı verir |
 | Raw | JSON satırları alındığı haliyle; agent'ın tam olarak ne gönderdiğini görmek için kullanışlıdır |
 
@@ -68,13 +68,15 @@ gelince alıcının portu, bağlı uygulamalar ve her çalıştırmanın sınır
 Her istek bir satırdır: önce isteğin ilk satırı, ardından kaç satırı olduğu, sonucu ve süresi, kaç
 `WARN` ve `ERROR` satırı olduğu ve adımlarından kaçının henüz `END` satırı gelmediği. Bir satır
 seçildiğinde istek, yanındaki **Steps** sekmesinde açılır: satırları, her adım onu başlatan adımın
-altında olacak şekilde görünür. Bir adım oku, çift tıklama ya da Sol ve Sağ tuşlarıyla
+altında olacak şekilde görünür; sağlarında da orada seçili satırın, seçim yoksa isteğin ilk
+satırının JSON'u ve stack trace'i durur. Bir adım oku, çift tıklama ya da Sol ve Sağ tuşlarıyla
 katlanır/açılır. Satır satır yalnızca seçili istekler dizildiği için uzun istekler listeyi
-yavaşlatmaz.
+yavaşlatmaz. IDE bölücülerin sürüklendiği yeri hatırlar; sonraki çalıştırmaların Trace Tail
+sekmeleri de aynı genişliklerle açılır.
 
-Shift ve Ctrl ile birden fazla istek seçilebilir; Steps onları alt alta, Sequence de her birini
-ayrı bir diyagram olarak gösterir. **Line**, Steps'te seçili satırların JSON'unu, orada seçim yoksa
-seçili isteklerin ilk satırlarınınkini gösterir. **Ctrl+C** seçili satırların istek
+Shift ve Ctrl ile birden fazla satır seçilebilir: birden fazla istek Steps'te alt alta görünür,
+Sequence de her birini ayrı bir diyagram olarak çizer; Steps'te birden fazla satır seçilince
+JSON'ları alt alta görünür. **Ctrl+C** seçili satırların istek
 kimliklerini, her biri bir satırda olacak şekilde kopyalar. Bağlam menüsündeki **Show in Flat**,
 Flat sekmesini o satırda ve isteğine odaklanmış olarak açar.
 
