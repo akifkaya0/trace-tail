@@ -62,6 +62,8 @@ internal class FlatConsole(project: Project, parent: Disposable, private val mod
         // the focused request may be gone: cleared, or below the level now
         if (change.reset && focus != null && change.admitted.none { it.trace?.take(ID_LENGTH) == focus }) focus = null
         view.show(change)
+        // or deleted: with its run, or by a limit; every line would stay faded
+        if (focus != null && change.removed.any { it.id.take(ID_LENGTH) == focus } && model.traces.keys.none { it.take(ID_LENGTH) == focus }) setFocus(null)
     }
 
     private fun parts(l: LogLine): List<Pair<String, ConsoleViewContentType>> =
