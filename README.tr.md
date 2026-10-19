@@ -90,7 +90,7 @@ Tree'nin yanındaki **Sequence** diyagramı seçili isteği, kimin kimi çağır
 olarak çizer. Her uygulama için, metotları `METHOD` adımları loglayan her sınıf için (kendi
 uygulamasının yanında tutulur) ve satır yazmayan taraflar için bir yaşam çizgisi bulunur: kullanıcı
 (`HTTP_IN` ve `WS_IN`'i gönderen, `WS_OUT`'u alan), zamanlayıcı, bir kuyruk, `LDAP_OUT`'un LDAP
-sistemi, `MAIL_OUT`'un e-posta sistemi, `HZ_OUT`'un Hazelcast sunucusu ve bir `HTTP_OUT`'un çağırdığı
+sistemi, `MAIL_OUT`'un e-posta sistemi, `DB_OUT`'un veritabanı, `HZ_OUT`'un Hazelcast sunucusu ve bir `HTTP_OUT`'un çağırdığı
 dış sistemler. `HZ_EMBEDDED` çağrısı uygulamanın içindeki Hazelcast'e gider; bu yüzden uygulamanın
 kendi yaşam çizgisinde kalır. Her çağrı, dönüş ve not,
 satırların yazıldığı sırayla bir satırdır; bir satırın üzerine gelindiğinde ipucu (tooltip) olarak o

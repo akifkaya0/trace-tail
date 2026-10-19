@@ -30,6 +30,7 @@ import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.PlainTextTokenTypes
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.tree.IElementType
@@ -204,7 +205,8 @@ internal class LogView(
         // only a stack trace has lines to fold or link, and few lines have one
         val traces = ArrayList<Pair<Entry, String>>()
         for (line in lines) {
-            val p = parts(line).filter { it.first.isNotEmpty() }
+            // a document takes only "\n"; a message or field from Windows may hold "\r\n"
+            val p = parts(line).map { StringUtil.convertLineSeparators(it.first) to it.second }.filter { it.first.isNotEmpty() }
             val entry = Entry(line, IntArray(p.size) { p[it].first.length }, Array(p.size) { p[it].second })
             entry.start = start
             start += entry.length

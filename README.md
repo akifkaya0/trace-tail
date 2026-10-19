@@ -84,7 +84,7 @@ The **Sequence** diagram beside the Tree draws the selected request as a flow of
 It has a lifeline for each app, for each class whose methods log `METHOD` steps (kept next to its
 app), and for the parties that write no lines: the user (who sends `HTTP_IN` and `WS_IN` and gets
 `WS_OUT`), the scheduler, a queue, the LDAP system of `LDAP_OUT`, the mail system of `MAIL_OUT`, the
-Hazelcast server of `HZ_OUT` and the outside systems an `HTTP_OUT` calls. An `HZ_EMBEDDED` call goes to
+database of `DB_OUT`, the Hazelcast server of `HZ_OUT` and the outside systems an `HTTP_OUT` calls. An `HZ_EMBEDDED` call goes to
 a Hazelcast inside the app, so it stays on the app's own lifeline. Each call, return and note is a row in the order the lines were
 written; hovering over a row shows its line as a tooltip. **Copy as Mermaid** copies the diagram as
 text, ready to paste into a document or a pull request description.

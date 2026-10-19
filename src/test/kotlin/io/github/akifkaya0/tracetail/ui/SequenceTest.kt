@@ -125,7 +125,7 @@ class SequenceTest {
     }
 
     @Test
-    fun drawsTheUserAndTheLdapAndMailSystems() {
+    fun drawsTheUserAndTheLdapMailAndDatabaseSystems() {
         // STOMP frames come from the user and go back to them; a heartbeat has no destination
         fun step(ms: Int, span: String, event: String, phase: String, parent: String?, fields: String) = line(
             """{"@timestamp":"2026-10-07T10:00:00.0${ms}Z","service.name":"chat","trace.id":"ws","span.id":"$span",""" +
@@ -139,6 +139,8 @@ class SequenceTest {
             step(25, "w2", "LDAP_OUT", "END", "w1", end("SUCCESS")),
             step(30, "w3", "MAIL_OUT", "START", "w1", ""","op":"send""""),
             step(35, "w3", "MAIL_OUT", "END", "w1", end("ERROR")),
+            step(36, "w6", "DB_OUT", "START", "w1", ""","op":"SELECT""""),
+            step(37, "w6", "DB_OUT", "END", "w1", end("SUCCESS")),
             step(40, "w4", "WS_OUT", "START", "w1", ""","command":"MESSAGE","destination":"/user/queue/history""""),
             step(45, "w4", "WS_OUT", "END", "w1", end("SUCCESS")),
             step(50, "w1", "WS_IN", "END", null, end("SUCCESS")),
@@ -152,6 +154,7 @@ class SequenceTest {
                 participant P1 as chat
                 participant P2 as ldap
                 participant P3 as mail
+                participant P4 as database
                 P0->>P1: SEND /app/history
                 activate P1
                 P1->>P2: search
@@ -162,6 +165,10 @@ class SequenceTest {
                 activate P3
                 P3-->>P1: ERROR · 5 ms
                 deactivate P3
+                P1->>P4: SELECT
+                activate P4
+                P4-->>P1: SUCCESS · 5 ms
+                deactivate P4
                 P1->>P0: MESSAGE /user/queue/history
                 activate P0
                 P0-->>P1: SUCCESS · 5 ms

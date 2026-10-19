@@ -43,6 +43,7 @@ internal class Sequence(val trace: Trace, isApp: (String) -> Boolean) {
             "MQ_OUT" -> QUEUE
             "LDAP_OUT" -> LDAP
             "MAIL_OUT" -> MAIL
+            "DB_OUT" -> DATABASE
             // an embedded Hazelcast runs inside the app, so HZ_EMBEDDED stays on the app's own lifeline
             "HZ_OUT" -> HAZELCAST
             "WS_OUT" -> USER
@@ -152,7 +153,7 @@ internal class Sequence(val trace: Trace, isApp: (String) -> Boolean) {
         val f = r.line.fields
         return when (r.step.event) {
             "HTTP_IN" -> f["route"] ?: "HTTP"
-            "HTTP_OUT", "LDAP_OUT", "MAIL_OUT" -> f["op"] ?: "call"
+            "HTTP_OUT", "LDAP_OUT", "MAIL_OUT", "DB_OUT" -> f["op"] ?: "call"
             // a STOMP frame: its command, and its destination when it has one
             "WS_IN", "WS_OUT" -> listOfNotNull(f["command"], f["destination"]).joinToString(" ").ifEmpty { "frame" }
             "MQ_OUT", "MQ_IN" -> f["queue"] ?: "queue"
@@ -236,6 +237,7 @@ internal class Sequence(val trace: Trace, isApp: (String) -> Boolean) {
         const val QUEUE = "ext:Queue"
         const val LDAP = "ext:ldap"
         const val MAIL = "ext:mail"
+        const val DATABASE = "ext:database"
         const val HAZELCAST = "ext:hazelcast"
         private val EXT_LABEL = mapOf(USER to "User", SCHEDULER to "Scheduler", QUEUE to "Queue")
     }
