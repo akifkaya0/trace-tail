@@ -121,7 +121,7 @@ class TraceModel(
     var kept = 0
         private set
 
-    /** The app whose oldest lines go since [LINES_MAX] was reached; null below it. */
+    /** The app whose oldest lines went since [LINES_MAX] was reached; it stays until [removeRun] or [clear], even below it. */
     var capped: String? = null
         private set
 
