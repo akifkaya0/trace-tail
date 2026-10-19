@@ -17,7 +17,7 @@ yanında, `trace.id`, `span.id` ve `parent.id` alanlarına göre iç içe göste
 uygulamadan geçen bir isteğin hangi adımlardan oluştuğunu, hangi adımın hangisini başlattığını ve
 nerede hata verdiğini tek bakışta görebilirsiniz.
 
-![Tree sekmesi: her istek için bir satır ve seçili, reddedilmiş isteğin sequence diyagramı](docs/images/tree-sequence.png)
+![Tree sekmesi: her istek için bir satır; seçili, hata vermiş istek Steps'te açık, yanında ilk satırının JSON'u](docs/images/tree-steps.png)
 
 ## Özellikler
 
@@ -95,6 +95,8 @@ satırların yazıldığı sırayla bir satırdır; bir satırın üzerine gelin
 log satırı görünür. **Copy as Mermaid** diyagramı metin olarak kopyalar; bu metin örneğin bir
 dokümana ya da pull request açıklamasına yapıştırılabilir.
 
+![Sequence sekmesi: seçili istek uygulamalar, sınıflar ve bir kuyruk arasında çizilmiş](docs/images/tree-sequence.png)
+
 ### Flat
 
 **Flat** sekmesi her satırı Tree'deki gibi renklendirir; uyarı ve hata satırlarının, stack
@@ -103,9 +105,9 @@ isteğinin kimliğinin ilk sekiz karakterini, o isteğe özgü bir renkte göste
 o isteğe odaklanır: diğer isteklerin satırları soluklaşır. Kimliğe yeniden tıklanınca tüm satırlar
 eski haline döner.
 
-![Flat sekmesi: tüm satırlar geliş sırasına göre; bir hata ve stack trace'i renkli arka planda](docs/images/flat.png)
+![Flat sekmesi: tüm satırlar geliş sırasına göre, her biri isteğinin kimliğiyle ve o isteğin renginde](docs/images/flat.png)
 
-![Flat sekmesinde odaklanılmış bir istek: diğer isteklerin satırları soluklaşır](docs/images/flat-2.png)
+![Flat sekmesinde odaklanılmış bir istek: diğer isteklerin satırları soluklaşır, uyarı satırlarının arka planı renklidir](docs/images/flat-2.png)
 
 ### Raw
 

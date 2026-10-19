@@ -16,7 +16,7 @@ belong to: each request is a single line; selecting it shows its log lines besid
 `trace.id`, `span.id` and `parent.id`. So for a request that passes through several applications,
 you can see at a glance which steps it took, which step started which, and where it failed.
 
-![The Tree tab: one row per request, and the selected rejected request drawn as a sequence diagram](docs/images/tree-sequence.png)
+![The Tree tab: one row per request, and the selected failed request open in Steps, with its first line's JSON beside it](docs/images/tree-steps.png)
 
 ## Features
 
@@ -88,6 +88,8 @@ the outside systems an `HTTP_OUT` calls. Each call, return and note is a row in 
 written; hovering over a row shows its line as a tooltip. **Copy as Mermaid** copies the diagram as
 text, ready to paste into a document or a pull request description.
 
+![The Sequence tab: the selected request drawn across apps, classes and a queue](docs/images/tree-sequence.png)
+
 ### Flat
 
 The **Flat** tab colours each line like the Tree, and gives warnings and errors, with their stack
@@ -95,9 +97,9 @@ traces, a tinted background. After its time and level, each line shows the first
 of its request's id, in a colour of the request's own. Clicking that id focuses the request: the
 lines of the other requests fade, until the id is clicked again.
 
-![The Flat tab: every line in arrival order, with an error and its stack trace on a tinted background](docs/images/flat.png)
+![The Flat tab: every line in arrival order, each with its request's id in the request's own colour](docs/images/flat.png)
 
-![The Flat tab with one request focused: the lines of the other requests fade](docs/images/flat-2.png)
+![The Flat tab with one request focused: the lines of the other requests fade, and its warnings have a tinted background](docs/images/flat-2.png)
 
 ### Raw
 
