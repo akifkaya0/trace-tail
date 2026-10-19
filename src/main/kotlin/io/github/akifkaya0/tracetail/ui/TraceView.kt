@@ -13,6 +13,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.project.DumbAwareToggleAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.openapi.util.Disposer
@@ -58,15 +59,21 @@ class TraceView(
         secondComponent = JBTabbedPane().apply {
             addTab("Steps", OnePixelSplitter(false, "tracetail.stepsSplit", 0.6f).apply {
                 firstComponent = steps.component
-                secondComponent = details.component
+                // closed until Show Line JSON opens it; the splitter gives the steps the whole width meanwhile
+                secondComponent = details.component.apply { isVisible = false }
             })
             addTab("Sequence", sequenceTab())
         }
     }
 
-    /** Scroll to the end of the requests, expand all and collapse all of Steps, for the view's toolbar. */
+    /** Scroll to the end of the requests, expand all and collapse all of Steps, and open the line's JSON, for the view's toolbar. */
     val treeActions: List<AnAction> = CommonActionsManager.getInstance().let {
-        listOf(ScrollToEndAction(), it.createExpandAllAction(steps.expander, steps.component), it.createCollapseAllAction(steps.expander, steps.component))
+        listOf(
+            ScrollToEndAction(),
+            it.createExpandAllAction(steps.expander, steps.component),
+            it.createCollapseAllAction(steps.expander, steps.component),
+            ShowDetailsAction(),
+        )
     }
 
     /** Set when requests changed while the view was off screen; it starts over from the model when it shows again. */
@@ -145,6 +152,18 @@ class TraceView(
         }
 
         override fun actionPerformed(e: AnActionEvent) = requests.scrollToBottom()
+    }
+
+    /** Opens and closes the selected lines' JSON beside the steps. */
+    private inner class ShowDetailsAction :
+        DumbAwareToggleAction("Show Line JSON", "Show the selected lines' JSON and stack traces beside the steps", AllIcons.Actions.PreviewDetails) {
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        override fun isSelected(e: AnActionEvent) = details.component.isVisible
+
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            details.component.isVisible = state
+            details.component.parent?.revalidate()
+        }
     }
 
     /** Opens the selected requests in Steps and draws them in Sequence. */
