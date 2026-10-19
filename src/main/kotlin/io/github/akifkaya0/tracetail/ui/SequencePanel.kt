@@ -355,6 +355,6 @@ internal class SequencePanel(private val model: TraceModel) : JPanel() {
     }
 
     private companion object {
-        const val HINT = "Select a line of a request to see its sequence diagram."
+        const val HINT = "Select a request to see its sequence diagram."
     }
 }

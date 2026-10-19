@@ -12,8 +12,8 @@
 
 IDE'den çalıştırdığınız uygulamaların loglarını canlı ve trace'e göre gruplanmış bir görünümde
 gösteren bir IntelliJ IDEA eklentisi. Loglar tek bir uzun akış olarak değil, ait oldukları isteğe
-göre toplanmış olarak gelir: her istek tek bir satıra katlanır; açıldığında o isteğin log satırları
-`trace.id`, `span.id` ve `parent.id` alanlarına göre iç içe gösterilir. Böylece birden fazla
+göre toplanmış olarak gelir: her istek tek bir satırdır; seçildiğinde o isteğin log satırları
+yanında, `trace.id`, `span.id` ve `parent.id` alanlarına göre iç içe gösterilir. Böylece birden fazla
 uygulamadan geçen bir isteğin hangi adımlardan oluştuğunu, hangi adımın hangisini başlattığını ve
 nerede hata verdiğini tek bakışta görebilirsiniz.
 
@@ -22,7 +22,7 @@ nerede hata verdiğini tek bakışta görebilirsiniz.
 ## Özellikler
 
 - **Her istek için bir satır**: satır sayısı, sonucu, süresi ve `WARN` ile `ERROR` satırlarının
-  sayısıyla; açıldığında adımlarını, hangi adımın hangisini başlattığına göre iç içe gösterir
+  sayısıyla; seçildiğinde adımlarını yanında, hangi adımın hangisini başlattığına göre iç içe gösterir
 - **Bir sequence diyagramı**: seçili isteği uygulamalar, sınıflar, kuyruklar ve dış sistemler
   arasında çizer; diyagram Mermaid olarak kopyalanabilir
 - **Tüm satırların bulunduğu bir konsol**: her istek kendi rengindedir; bir isteğin kimliğine
@@ -54,7 +54,7 @@ Araç penceresinde aynı loglara üç farklı açıdan bakan üç sekme vardır:
 
 | Sekme | Gösterdiği |
 |---|---|
-| Tree | Her istek için bir satır; açıldığında adımlarını gösterir. Yanında, seçili satırın JSON'u ve stack trace'i (Line) ile seçili isteğin sequence diyagramı (Sequence) yer alır |
+| Tree | Her istek için bir satır. Yanında, seçili isteğin adımları (Steps), seçili satırın JSON'u ve stack trace'i (Line) ile seçili isteğin sequence diyagramı (Sequence) yer alır |
 | Flat | Tüm satırlar geliş sırasına göre, konsol biçiminde; stack trace satırları kaynak koda bağlantı verir |
 | Raw | JSON satırları alındığı haliyle; agent'ın tam olarak ne gönderdiğini görmek için kullanışlıdır |
 
@@ -67,11 +67,14 @@ gelince alıcının portu, bağlı uygulamalar ve her çalıştırmanın sınır
 
 Her istek bir satırdır: önce isteğin ilk satırı, ardından kaç satırı olduğu, sonucu ve süresi, kaç
 `WARN` ve `ERROR` satırı olduğu ve adımlarından kaçının henüz `END` satırı gelmediği. Bir satır
-açıldığında isteğin adımları, her biri onu başlatan adımın altında olacak şekilde görünür. Bir satır
-oku, çift tıklama ya da Sol ve Sağ tuşlarıyla katlanır/açılır.
+seçildiğinde istek, yanındaki **Steps** sekmesinde açılır: satırları, her adım onu başlatan adımın
+altında olacak şekilde görünür. Bir adım oku, çift tıklama ya da Sol ve Sağ tuşlarıyla
+katlanır/açılır. Satır satır yalnızca seçili istekler dizildiği için uzun istekler listeyi
+yavaşlatmaz.
 
-Shift ve Ctrl ile birden fazla satır seçilebilir; Line seçili satırları alt alta, Sequence de
-her birinin isteğini ayrı bir diyagram olarak gösterir. **Ctrl+C** seçili satırların istek
+Shift ve Ctrl ile birden fazla istek seçilebilir; Steps onları alt alta, Sequence de her birini
+ayrı bir diyagram olarak gösterir. **Line**, Steps'te seçili satırların JSON'unu, orada seçim yoksa
+seçili isteklerin ilk satırlarınınkini gösterir. **Ctrl+C** seçili satırların istek
 kimliklerini, her biri bir satırda olacak şekilde kopyalar. Bağlam menüsündeki **Show in Flat**,
 Flat sekmesini o satırda ve isteğine odaklanmış olarak açar.
 
@@ -127,8 +130,8 @@ konsolu gibi sekmesi olmayan bir run penceresine sekme eklenmez.
   `END` satırlarını korur; böylece görünmeye devam eden bir istek ilk satırını da korur.
 - **Scroll to the End**: en yeni satırları gösterir. Sonuna kaydırılmış bir görünüm yeni satırları
   izlemeye devam eder; yukarı kaydırmak bunu durdurur, böylece okunan satırlar yerinde kalır.
-- tüm istekleri açar veya kapatır
-- **Soft-Wrap**'i açıp kapatır: açıkken uzun satırlar ağaçta ve konsollarda bir sonraki satırda
+- Steps'teki tüm adımları açar ya da her isteğin ilk adımlarına kadar katlar
+- **Soft-Wrap**'i açıp kapatır: açıkken uzun satırlar Tree sekmesinde ve konsollarda bir sonraki satırda
   devam eder; kapalıyken her biri tek satırda kalır ve görünüm yatay kaydırılır. IDE bu seçimi
   hatırlar.
 

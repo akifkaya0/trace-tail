@@ -31,8 +31,9 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 
 /**
- * The requests as a tree. Beside it, the selected lines (their JSON and stack traces) and the
- * selected requests as sequence diagrams, one under the other.
+ * The requests, one row each. Beside them, in tabs: the selected requests open into their steps
+ * (Steps), the selected lines' JSON and stack traces (Line), and the selected requests as sequence
+ * diagrams, one under the other (Sequence).
  */
 class TraceView(
     project: Project,
@@ -44,20 +45,25 @@ class TraceView(
     private val details: ConsoleView = TextConsoleBuilderFactory.getInstance().createBuilder(project).apply { setViewer(true) }.console
     private val sequences = ArrayList<SequencePanel>()
     private val sequenceBox = JPanel(VerticalLayout(JBUI.scale(24)))
-    private val tree = TraceTree(project, feed.model, include, ::select, showInFlat)
+
+    /** The ids of the requests selected in the list, which Steps shows. */
+    private var selected: Set<String> = emptySet()
+    private val requests = TraceTree(project, feed.model, include, ::selectRequests, showInFlat, steps = false)
+    private val steps = TraceTree(project, feed.model, { it.id in selected }, ::selectLines, showInFlat, steps = true)
     private var ticks = 0
 
     val component: JComponent = OnePixelSplitter(false, 0.6f).apply {
-        firstComponent = tree.component
+        firstComponent = requests.component
         secondComponent = JBTabbedPane().apply {
+            addTab("Steps", steps.component)
             addTab("Line", details.component)
             addTab("Sequence", sequenceTab())
         }
     }
 
-    /** Scroll to the end, expand all and collapse all, for the view's toolbar. */
+    /** Scroll to the end of the requests, expand all and collapse all of Steps, for the view's toolbar. */
     val treeActions: List<AnAction> = CommonActionsManager.getInstance().let {
-        listOf(ScrollToEndAction(), it.createExpandAllAction(tree.expander, tree.component), it.createCollapseAllAction(tree.expander, tree.component))
+        listOf(ScrollToEndAction(), it.createExpandAllAction(steps.expander, steps.component), it.createCollapseAllAction(steps.expander, steps.component))
     }
 
     /** Set when requests changed while the view was off screen; it starts over from the model when it shows again. */
@@ -83,7 +89,8 @@ class TraceView(
 
             override fun ticked() {
                 if (!component.isShowing || ++ticks % REFRESH_EVERY_TICKS != 0) return
-                tree.refreshRunning()
+                requests.refreshRunning()
+                steps.refreshRunning()
                 // the running steps' times keep growing
                 if (sequences.any { it.running }) showSequences(shownIds())
             }
@@ -93,13 +100,15 @@ class TraceView(
     override fun dispose() = Unit
 
     private fun apply(change: Change) {
-        tree.apply(change)
+        requests.apply(change)
+        steps.apply(change)
         val shown = shownIds()
         if (shown.isNotEmpty() && (change.reset || change.changed.any { it.id in shown })) showSequences(shown)
     }
 
     private fun softWraps(on: Boolean) {
-        tree.setWrap(on)
+        requests.setWrap(on)
+        steps.setWrap(on)
         details.setSoftWraps(on)
     }
 
@@ -124,31 +133,39 @@ class TraceView(
         }
     }
 
-    /** Like a console's: shows the newest rows, and a tree scrolled to its end keeps following new ones. */
+    /** Like a console's: shows the newest requests, and a list scrolled to its end keeps following new ones. */
     private inner class ScrollToEndAction :
         DumbAwareAction("Scroll to the End", "Show the newest lines and keep following them", AllIcons.RunConfigurations.Scroll_down) {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
         override fun update(e: AnActionEvent) {
-            e.presentation.isEnabled = !tree.atBottom()
+            e.presentation.isEnabled = !requests.atBottom()
         }
 
-        override fun actionPerformed(e: AnActionEvent) = tree.scrollToBottom()
+        override fun actionPerformed(e: AnActionEvent) = requests.scrollToBottom()
     }
 
-    private fun select(lines: List<LogLine>) {
+    /** Opens the selected requests in Steps and draws them in Sequence. */
+    private fun selectRequests(lines: List<LogLine>) {
+        selected = lines.mapNotNullTo(LinkedHashSet()) { it.trace }
+        steps.show(selected.mapNotNull { feed.model.traces[it] })
+        selectLines(steps.selectedLines())
+        val ids = selected.toList()
+        if (ids != shownIds()) showSequences(ids)
+    }
+
+    /** Line shows the lines selected in Steps, or with none, the rows selected in the requests. */
+    private fun selectLines(lines: List<LogLine>) {
         details.clear()
-        lines.forEachIndexed { i, line ->
+        lines.ifEmpty { requests.selectedLines() }.forEachIndexed { i, line ->
             if (i > 0) details.print("\n", ConsoleViewContentType.NORMAL_OUTPUT)
             details.print(line.prettyJson() + "\n", ConsoleViewContentType.NORMAL_OUTPUT)
             line.stackTrace?.let { details.print("\n" + it + "\n", ConsoleViewContentType.ERROR_OUTPUT) }
         }
-        val ids = lines.mapNotNull { it.trace }.distinct()
-        if (ids != shownIds()) showSequences(ids)
     }
 
     private fun shownIds(): List<String> = sequences.mapNotNull { it.trace?.id }
 
-    /** Draws the requests one under the other; with none, the diagram asks for a line to be selected. */
+    /** Draws the requests one under the other; with none, the diagram asks for a request to be selected. */
     private fun showSequences(ids: List<String>) {
         val traces: List<Trace?> = ids.mapNotNull { feed.model.traces[it] }.ifEmpty { listOf(null) }
         while (sequences.size < traces.size) sequences += SequencePanel(feed.model).also { sequenceBox.add(it) }

@@ -6,7 +6,7 @@
     <description><![CDATA[
         <p>Live view of the logs of the Java applications you run from the IDE, grouped by the request
         they belong to.</p>
-        <p>Each request is folded into a single row; opening it shows its log lines nested by
+        <p>Each request is a single row; selecting it shows its log lines beside it, nested by
         <code>trace.id</code>, <code>span.id</code> and <code>parent.id</code>. So for a request that
         passes through several applications, you can see at a glance which steps it took, which step
         started which, and where it failed.</p>
@@ -15,7 +15,7 @@
                 alt="The Tree tab, with the selected request as a sequence diagram"/></p>
         <ul>
             <li><b>Tree</b>: one row per request, with its line count, outcome, duration and the number of
-                WARN and ERROR lines; opening it shows its steps</li>
+                WARN and ERROR lines; selecting it shows its steps beside it</li>
             <li><b>Sequence</b>: the selected request as a diagram of who called whom across apps, classes,
                 queues and outside systems; <b>Copy as Mermaid</b> copies it as text</li>
             <li><b>Flat</b>: every line in arrival order, coloured per request; clicking a request's id
@@ -42,6 +42,15 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p><b>1.5.0</b></p>
+        <ul>
+            <li>The Tree lists each request as one row; selecting it opens its steps in a new Steps tab
+                beside it, next to Line and Sequence</li>
+            <li>Only the selected requests are laid out line by line: a request no longer lays out all
+                its lines again each time one arrives, so long requests no longer slow the Tree down</li>
+            <li>Expand All and Collapse All act on Steps; Collapse All keeps each request open on its
+                first steps</li>
+        </ul>
         <p><b>1.4.1</b></p>
         <ul>
             <li>Replaces the deprecated and internal IntelliJ API that IntelliJ IDEA 2026.3 warns about</li>

@@ -68,10 +68,10 @@ internal class Node(val traceId: String, val row: Any, val depth: Int, val inden
 }
 
 /**
- * The requests as a tree: one row per request, opening into its steps, nested by span.id and
- * parent.id. The tree is drawn in a table, so that long lines can wrap: the table shows the open
- * rows, and the Message column draws each row's indent and fold arrow. Requests the reader opened,
- * and steps they folded, stay that way while lines arrive. Shift and Ctrl select several rows;
+ * The requests as a tree: a row per request, which with [steps] opens into its steps, nested by
+ * span.id and parent.id. The tree is drawn in a table, so that long lines can wrap: the table shows
+ * the open rows, and the Message column draws each row's indent and fold arrow. Requests and steps
+ * the reader closed or opened stay that way while lines arrive. Shift and Ctrl select several rows;
  * Ctrl+C copies their requests' ids.
  */
 internal class TraceTree(
@@ -82,12 +82,13 @@ internal class TraceTree(
     private val onSelect: (List<LogLine>) -> Unit,
     /** Opens the Flat tab on a line, if this tree has one beside it. */
     private val showInFlat: ((LogLine) -> Unit)?,
+    /** Whether the requests show open, with their steps; without, each request is one row, and the rows inside it are never built. */
+    private val steps: Boolean,
 ) {
 
     /** The reader's choices for one request, kept across rebuilds. */
-    private class TraceUi {
+    private class TraceUi(var open: Boolean) {
         var node: Node? = null
-        var open = false
         val folded = HashSet<String?>()
         var wasRunning = false
     }
@@ -196,12 +197,14 @@ internal class TraceTree(
         val menu = DefaultActionGroup(ActionManager.getInstance().getAction(IdeActions.ACTION_EDIT_SOURCE))
         showInFlat?.let { menu.add(ShowInFlatAction(it)) }
         PopupHandler.installPopupMenu(table, menu, "TraceTailTree")
+        if (steps) table.emptyText.text = "Select a request to see its steps."
     }
 
     /** The line of the row the keyboard is on. */
     fun selectedLine(): LogLine? = (visible.getOrNull(leadRow())?.row as? LineRow)?.line
 
-    private fun selectedLines(): List<LogLine> = table.selectedRows.asList().mapNotNull { (visible.getOrNull(it)?.row as? LineRow)?.line }
+    /** The lines of the selected rows. */
+    fun selectedLines(): List<LogLine> = table.selectedRows.asList().mapNotNull { (visible.getOrNull(it)?.row as? LineRow)?.line }
 
     /** The row the keyboard is on: the one last clicked or reached with the arrow keys, if it is selected. */
     private fun leadRow(): Int = table.selectionModel.leadSelectionIndex.takeIf { table.isRowSelected(it) } ?: table.selectedRow
@@ -238,23 +241,29 @@ internal class TraceTree(
     fun apply(change: Change) {
         // a request that lost a run's lines may no longer be one this tree shows
         val (changed, left) = change.changed.partition(include)
-        if (!change.reset && changed.isEmpty() && change.removed.isEmpty() && left.none { it.id in ui }) return
+        if (!change.reset && changed.isEmpty() && change.removed.none { it.id in ui } && left.none { it.id in ui }) return
         val follow = atBottom()
         if (change.reset) {
             val old = HashMap(ui)
             ui.clear()
             for (trace in changed) {
-                val u = TraceUi()
+                val u = TraceUi(steps)
                 old[trace.id]?.let { u.open = it.open; u.folded += it.folded }
                 ui[trace.id] = u
             }
         } else {
             for (trace in change.removed + left) ui.remove(trace.id)
-            for (trace in changed) ui.getOrPut(trace.id) { TraceUi() }
+            for (trace in changed) ui.getOrPut(trace.id) { TraceUi(steps) }
         }
         changed.forEach(::rebuild)
         refresh()
         if (follow && changed.isNotEmpty()) scrollToBottom()
+    }
+
+    /** Starts over with these requests, which [include] must now take, from their first row. */
+    fun show(traces: List<Trace>) {
+        apply(Change(emptyList(), emptyList(), traces, emptyList(), reset = true))
+        scrollToRow(0)
     }
 
     /**
@@ -290,11 +299,11 @@ internal class TraceTree(
         val main = b.shape.roots.singleOrNull()?.takeIf { it.startLine != null }
         return if (main != null) {
             Node(b.trace.id, LineRow(b.trace, main.startLine!!, main, true, summary(b, main, true)), 0).also {
-                body(it, main, b)
+                if (steps) body(it, main, b)
             }
         } else {
             Node(b.trace.id, LineRow(b.trace, b.trace.lines.first(), null, true, summary(b, null, true)), 0).also { node ->
-                b.shape.roots.forEach { step(node, it, b) }
+                if (steps) b.shape.roots.forEach { step(node, it, b) }
             }
         }
     }
@@ -378,14 +387,25 @@ internal class TraceTree(
         refresh()
     }
 
+    /** Opens every request and step; or folds every step, the requests staying open on their first steps. */
     private fun setAllOpen(open: Boolean) {
         for (u in ui.values) {
-            u.open = open
-            if (open) u.folded.clear()
+            u.open = true
+            u.folded.clear()
+            if (!open) u.node?.let { fold(it, u.folded) }
         }
         heights.clear()
         widths.clear()
         refresh()
+    }
+
+    /** Adds the steps inside [node] that have rows of their own. */
+    private fun fold(node: Node, folded: MutableSet<String?>) {
+        for (child in node.children) {
+            if (child.children.isEmpty()) continue
+            (child.row as? LineRow)?.step?.let { folded += it.id }
+            fold(child, folded)
+        }
     }
 
     /** Lists the open rows again, keeping the selection on the same rows. */
@@ -481,7 +501,7 @@ internal class TraceTree(
 
     private fun TextCell.configureMessage(node: Node?) {
         wrap = this@TraceTree.wrap
-        arrowSlot = true
+        arrowSlot = steps
         indent = TextCell.indent(node?.indentDepth ?: 0)
         val expanded = node != null && node.children.isNotEmpty() && isExpanded(node)
         arrow = when {

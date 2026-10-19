@@ -12,7 +12,7 @@ English | [Türkçe](README.tr.md)
 
 An IntelliJ IDEA plugin that shows the logs of the applications you run from the IDE as a live,
 trace-grouped view. The logs do not arrive as one long stream but gathered by the request they
-belong to: each request is folded into a single line; opening it shows its log lines nested by
+belong to: each request is a single line; selecting it shows its log lines beside it, nested by
 `trace.id`, `span.id` and `parent.id`. So for a request that passes through several applications,
 you can see at a glance which steps it took, which step started which, and where it failed.
 
@@ -21,7 +21,7 @@ you can see at a glance which steps it took, which step started which, and where
 ## Features
 
 - **One row per request**, with its line count, outcome, duration and the number of `WARN` and
-  `ERROR` lines; opening it shows its steps, nested by which step started which
+  `ERROR` lines; selecting it shows its steps beside it, nested by which step started which
 - **A sequence diagram** of the selected request across apps, classes, queues and outside systems,
   which can be copied as Mermaid
 - **A console of every line**, coloured per request; clicking a request's id fades the others out
@@ -49,7 +49,7 @@ The tool window has three tabs that look at the same logs from three angles:
 
 | Tab | Shows |
 |---|---|
-| Tree | One row per request, opening into its steps. Beside it, the selected line's JSON and stack trace (Line) and the selected request as a sequence diagram (Sequence) |
+| Tree | One row per request. Beside it, the selected request's steps (Steps), the selected line's JSON and stack trace (Line) and the selected request as a sequence diagram (Sequence) |
 | Flat | Every line in arrival order, as a console; stack trace frames link to the source |
 | Raw | The JSON lines as received; useful to see exactly what the agent sent |
 
@@ -61,12 +61,14 @@ it shows the receiver's port, the connected apps and the limit of each run (see
 ### Tree
 
 Each request is one row: its first line, then how many lines it has, its outcome and duration, how
-many `WARN` and `ERROR` lines it has, and how many of its steps have no `END` line yet. Opening a
-row shows the request's steps, each under the step that started it. A row folds with its arrow, a
-double click, or the Left and Right keys.
+many `WARN` and `ERROR` lines it has, and how many of its steps have no `END` line yet. Selecting
+a row opens the request in **Steps** beside it: its lines, each step under the step that started
+it. A step folds with its arrow, a double click, or the Left and Right keys. Only the selected
+requests are laid out line by line, so long requests do not slow the list down.
 
-Shift and Ctrl select several rows; Line then shows their lines one under the other, and Sequence
-draws each of their requests. **Ctrl+C** copies the request ids of the selected rows, one per line.
+Shift and Ctrl select several requests; Steps then shows them one under the other, and Sequence
+draws each of them. **Line** shows the JSON of the lines selected in Steps, or with none, of the
+selected requests' first lines. **Ctrl+C** copies the request ids of the selected rows, one per line.
 **Show in Flat** in the context menu opens the Flat tab on the line, with its request focused.
 
 **F4** or **Jump to Source** in the context menu opens the class that wrote the line
@@ -118,8 +120,8 @@ requests. A run window without tabs, such as a plain Run console, gets no tab.
   shows keeps its first row.
 - **Scroll to the End**: show the newest lines. A view scrolled to its end keeps following new
   lines; scrolling up stops it, so the lines being read stay in place.
-- expand or collapse all requests
-- turn **Soft-Wrap** on or off: wrapped, long lines continue on the next line in the tree and the
+- expand every step in Steps, or collapse them to each request's first steps
+- turn **Soft-Wrap** on or off: wrapped, long lines continue on the next line in the Tree tab and the
   consoles; unwrapped, each stays on one line and the view scrolls sideways. The IDE remembers the
   choice.
 
