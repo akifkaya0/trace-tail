@@ -43,7 +43,7 @@ nerede hata verdiğini tek bakışta görebilirsiniz.
 Bu deponun bir derlemesini kurmak için ise `buildPlugin` Gradle görevini çalıştırın (Gradle araç
 penceresi → **trace-tail → Tasks → intellij platform → buildPlugin**), ardından **Settings →
 Plugins** içinde dişli simgesine tıklayın, **Install Plugin from Disk…** seçeneğini seçin ve
-`build/distributions/trace-tail-1.5.0.zip` dosyasını gösterin.
+`build/distributions/trace-tail-1.5.1.zip` dosyasını gösterin.
 
 Agent'ın desteklediği log kurulumları için
 [Uygulamanın ihtiyaç duyduğu](#uygulamanın-ihtiyaç-duyduğu) bölümüne bakın.
@@ -90,7 +90,9 @@ Tree'nin yanındaki **Sequence** diyagramı seçili isteği, kimin kimi çağır
 olarak çizer. Her uygulama için, metotları `METHOD` adımları loglayan her sınıf için (kendi
 uygulamasının yanında tutulur) ve satır yazmayan taraflar için bir yaşam çizgisi bulunur: kullanıcı
 (`HTTP_IN` ve `WS_IN`'i gönderen, `WS_OUT`'u alan), zamanlayıcı, bir kuyruk, `LDAP_OUT`'un LDAP
-sistemi, `MAIL_OUT`'un e-posta sistemi ve bir `HTTP_OUT`'un çağırdığı dış sistemler. Her çağrı, dönüş ve not,
+sistemi, `MAIL_OUT`'un e-posta sistemi, `HZ_OUT`'un Hazelcast sunucusu ve bir `HTTP_OUT`'un çağırdığı
+dış sistemler. `HZ_EMBEDDED` çağrısı uygulamanın içindeki Hazelcast'e gider; bu yüzden uygulamanın
+kendi yaşam çizgisinde kalır. Her çağrı, dönüş ve not,
 satırların yazıldığı sırayla bir satırdır; bir satırın üzerine gelindiğinde ipucu (tooltip) olarak o
 log satırı görünür. **Copy as Mermaid** diyagramı metin olarak kopyalar; bu metin örneğin bir
 dokümana ya da pull request açıklamasına yapıştırılabilir.
