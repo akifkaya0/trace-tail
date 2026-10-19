@@ -45,6 +45,13 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p><b>1.5.2</b></p>
+        <ul>
+            <li>The selected line's JSON beside the steps starts closed; <b>Show Line JSON</b> in the toolbar
+                opens and closes it</li>
+            <li>The Sequence diagram draws a <code>DB_OUT</code> call to a database lifeline, labelled with
+                its operation</li>
+        </ul>
         <p><b>1.5.1</b></p>
         <ul>
             <li>The Sequence diagram draws an <code>HZ_OUT</code> call to a Hazelcast lifeline and keeps an

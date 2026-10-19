@@ -38,7 +38,7 @@ you can see at a glance which steps it took, which step started which, and where
 To install a build of this repository instead, run the `buildPlugin` Gradle task (Gradle tool
 window → **trace-tail → Tasks → intellij platform → buildPlugin**), then in **Settings → Plugins**
 click the gear icon, choose **Install Plugin from Disk…** and select
-`build/distributions/trace-tail-1.5.1.zip`.
+`build/distributions/trace-tail-1.5.2.zip`.
 
 See [What the application needs](#what-the-application-needs) for the logging setups the agent
 supports.
@@ -64,7 +64,7 @@ Each request is one row: its first line, then how many lines it has, its outcome
 many `WARN` and `ERROR` lines it has, and how many of its steps have no `END` line yet. Selecting
 a row opens the request in **Steps** beside it: its lines, each step under the step that started
 it, and on their right the JSON and stack trace of the line selected there, or with none, of the
-request's first line. A step folds with its arrow, a double click, or the Left and Right keys.
+request's first line. That JSON starts closed; **Show Line JSON** in the toolbar opens and closes it. A step folds with its arrow, a double click, or the Left and Right keys.
 Only the selected requests are laid out line by line, so long requests do not slow the list down.
 The IDE remembers where the dividers were dragged, and the Trace Tail tabs of later runs open the
 same way.

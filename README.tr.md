@@ -43,7 +43,7 @@ nerede hata verdiğini tek bakışta görebilirsiniz.
 Bu deponun bir derlemesini kurmak için ise `buildPlugin` Gradle görevini çalıştırın (Gradle araç
 penceresi → **trace-tail → Tasks → intellij platform → buildPlugin**), ardından **Settings →
 Plugins** içinde dişli simgesine tıklayın, **Install Plugin from Disk…** seçeneğini seçin ve
-`build/distributions/trace-tail-1.5.1.zip` dosyasını gösterin.
+`build/distributions/trace-tail-1.5.2.zip` dosyasını gösterin.
 
 Agent'ın desteklediği log kurulumları için
 [Uygulamanın ihtiyaç duyduğu](#uygulamanın-ihtiyaç-duyduğu) bölümüne bakın.
@@ -69,7 +69,8 @@ Her istek bir satırdır: önce isteğin ilk satırı, ardından kaç satırı o
 `WARN` ve `ERROR` satırı olduğu ve adımlarından kaçının henüz `END` satırı gelmediği. Bir satır
 seçildiğinde istek, yanındaki **Steps** sekmesinde açılır: satırları, her adım onu başlatan adımın
 altında olacak şekilde görünür; sağlarında da orada seçili satırın, seçim yoksa isteğin ilk
-satırının JSON'u ve stack trace'i durur. Bir adım oku, çift tıklama ya da Sol ve Sağ tuşlarıyla
+satırının JSON'u ve stack trace'i durur. Bu JSON kapalı gelir; araç çubuğundaki **Show Line JSON**
+onu açıp kapatır. Bir adım oku, çift tıklama ya da Sol ve Sağ tuşlarıyla
 katlanır/açılır. Satır satır yalnızca seçili istekler dizildiği için uzun istekler listeyi
 yavaşlatmaz. IDE bölücülerin sürüklendiği yeri hatırlar; sonraki çalıştırmaların Trace Tail
 sekmeleri de aynı genişliklerle açılır.
