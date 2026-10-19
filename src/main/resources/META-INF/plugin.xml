@@ -46,7 +46,8 @@
         <ul>
             <li>Each run keeps as much text as its console would (Settings | Editor | General |
                 Console); past that, its oldest request goes, from every app and all three tabs. A
-                request that got a line in the last 30 seconds loses only its oldest lines</li>
+                request that got a line in the last 30 seconds loses only its oldest lines, but never its
+                START alone</li>
             <li>All runs together keep at most 50,000 lines; past that, the run with the most lines
                 loses its oldest request</li>
             <li>A changed level filter no longer shrinks the Tree</li>

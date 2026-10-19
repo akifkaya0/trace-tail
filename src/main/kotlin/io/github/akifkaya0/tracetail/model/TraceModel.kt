@@ -21,7 +21,8 @@ class Change(
  *
  * Each run, a process by its id, keeps lines up to [limit] of the Flat tab's text, the lines the
  * level hides included. Past that, its oldest line goes, with its whole request from every run;
- * a request that got a line in the last [ACTIVE_MS] loses only its oldest lines. All runs together
+ * a request that got a line in the last [ACTIVE_MS] loses only its oldest lines, unless the oldest
+ * is a START, which never goes without its request. All runs together
  * keep at most [LINES_MAX] lines; past that, the run with the most lines loses its oldest request
  * the same way.
  */
@@ -221,13 +222,13 @@ class TraceModel(
         shown.clear()
     }
 
-    /** Deletes the run's oldest line, or its whole request when that got no line for [ACTIVE_MS]; false when the run has none. */
+    /** Deletes the run's oldest line, or its whole request when that got no line for [ACTIVE_MS] or the line is a START; false when the run has none. */
     private fun trim(run: Run, now: Long, update: Update): Boolean {
         while (run.lines.firstOrNull()?.seq?.let { it in update.gone } == true) run.lines.removeFirst()
         val oldest = run.lines.firstOrNull() ?: return false
         val id = oldest.trace
         val request = id?.let(requests::get)
-        if (request == null || now - request.last < ACTIVE_MS) {
+        if (request == null || (now - request.last < ACTIVE_MS && oldest.phase != Phase.START)) {
             if (id != null) headless += id
             delete(oldest, update)
         } else {

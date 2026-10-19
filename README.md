@@ -199,7 +199,8 @@ When a run passes its limit, its oldest line goes:
 - If not, only that line goes.
 
 A request that got a line in the last 30 seconds is still going on, so only its oldest lines go.
-Its row in the Tree then says *older lines dropped*.
+Its row in the Tree then says *older lines dropped*. A `START` line never goes alone, though: when
+it is the oldest, the whole request goes.
 
 All runs together keep at most 50,000 lines. Past that, the run that holds the most lines loses its
 oldest request, by the same rules. The status line then says *limit reached*, and its tooltip says

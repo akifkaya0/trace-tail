@@ -148,6 +148,17 @@ class TraceModelTest {
     }
 
     @Test
+    fun deletesTheWholeRequestRatherThanItsStartWhileItIsStillGettingLines() {
+        val model = TraceModel(measure = { 100 }, limit = { 300 })
+        model.add(listOf(line("""{"message":"Started","process.pid":"1","trace.id":"r","span.id":"s","phase":"START"}""")), now = 0)
+        model.add((1..2).map { line(1, "r", "m$it") }, now = 0)
+        val change = model.add(listOf(line(1, "next", "n")), now = 1)
+        assertEquals(listOf("Started", "m1", "m2"), change.deleted.map { it.message })
+        assertEquals(listOf("r"), change.removed.map { it.id })
+        assertEquals(listOf("next"), model.traces.keys.toList())
+    }
+
+    @Test
     fun deletesALineOutsideAnyRequestAlone() {
         val model = TraceModel(measure = { 100 }, limit = { 200 })
         model.add(listOf(line(1, "r", "in"), line(1, null, "out")), now = 0)

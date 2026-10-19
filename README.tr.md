@@ -207,7 +207,8 @@ Bir çalıştırma sınırını aşınca en eski satırı silinir:
 - Değilse yalnızca o satır silinir.
 
 Son 30 saniyede satır almış bir istek hâlâ sürüyordur; bu yüzden yalnızca en eski satırları silinir.
-Tree'deki satırında bundan sonra *older lines dropped* yazar.
+Tree'deki satırında bundan sonra *older lines dropped* yazar. Ancak bir `START` satırı tek başına
+silinmez: en eski satır o ise isteğin tamamı silinir.
 
 Bütün çalıştırmalar birlikte en fazla 50.000 satır tutar. Bunu geçince en çok satır tutan
 çalıştırmanın en eski isteği aynı kurallarla silinir. Durum satırında bundan sonra *limit reached*
