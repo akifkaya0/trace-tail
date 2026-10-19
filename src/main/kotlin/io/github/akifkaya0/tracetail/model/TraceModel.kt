@@ -273,8 +273,12 @@ class TraceModel(
         if (line.level < levelOf(line.app)) {
             // a hidden main step is not skipped: its lines are held, and the lines inside it stay under it
             if (line.phase == Phase.START && line.span != null && !isMain(line)) {
-                skipped[line.span] = resolve(line.parent)
-                if (skipped.size > SKIPPED_MAX) skipped.remove(skipped.keys.first())
+                val ancestor = resolve(line.parent)
+                // a step that leads back to itself, by its own id or through another request's, would make resolve loop forever
+                if (ancestor != line.span) {
+                    skipped[line.span] = ancestor
+                    if (skipped.size > SKIPPED_MAX) skipped.remove(skipped.keys.first())
+                }
             }
             return null
         }

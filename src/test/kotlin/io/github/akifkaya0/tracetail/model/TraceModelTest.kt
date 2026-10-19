@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 
 /** The received lines grouped by request, and the level filter applied to them. */
 class TraceModelTest {
@@ -36,6 +37,29 @@ class TraceModelTest {
         val step = model.traces.getValue("levels").steps.values.single()
         assertEquals("s1", step.id)
         assertEquals(listOf("Checked the stock", "No price, using the list price"), step.notes.map { it.message })
+    }
+
+    @Test
+    @Timeout(5, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    fun keepsTheLinesOfAHiddenStepThatIsItsOwnParent() {
+        model.setLevel(null, Level.WARN)
+        model.add(listOf(line("""{"message":"Started","trace.id":"r","span.id":"s1","parent.id":"s1","phase":"START"}""")))
+        val change = model.add(listOf(line("""{"message":"Inside","log.level":"WARN","trace.id":"r","span.id":"s1"}""")))
+        assertEquals("s1", change.admitted.single().span)
+    }
+
+    @Test
+    @Timeout(5, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    fun keepsTheLinesOfHiddenStepsThatAreEachOthersParents() {
+        model.setLevel(null, Level.WARN)
+        model.add(
+            listOf(
+                line("""{"message":"a","trace.id":"r1","span.id":"a","parent.id":"b","phase":"START"}"""),
+                line("""{"message":"b","trace.id":"r2","span.id":"b","parent.id":"a","phase":"START"}"""),
+            ),
+        )
+        val change = model.add(listOf(line("""{"message":"Inside","log.level":"WARN","trace.id":"r2","span.id":"b"}""")))
+        assertEquals("b", change.admitted.single().span)
     }
 
     @Test
