@@ -49,6 +49,11 @@
         <ul>
             <li>The Sequence diagram draws a <code>LIFECYCLE</code> step on a lifeline for its target class,
                 kept next to its app, and labels it with its operation</li>
+            <li>The Sequence diagram draws an <code>HZ_EMBEDDED</code> call to its own Hazelcast lifeline
+                inside the app's box instead of back to the app; an <code>HZ_OUT</code> call still goes to the
+                Hazelcast outside it</li>
+            <li>The Sequence diagram labels a <code>DB_OUT</code> call with its target and operation, such as
+                <code>OrderRepository.findById</code></li>
         </ul>
         <p><b>1.5.2</b></p>
         <ul>

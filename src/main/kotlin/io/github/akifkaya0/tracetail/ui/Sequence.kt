@@ -44,8 +44,9 @@ internal class Sequence(val trace: Trace, isApp: (String) -> Boolean) {
             "LDAP_OUT" -> LDAP
             "MAIL_OUT" -> MAIL
             "DB_OUT" -> DATABASE
-            // an embedded Hazelcast runs inside the app, so HZ_EMBEDDED stays on the app's own lifeline
             "HZ_OUT" -> HAZELCAST
+            // an embedded Hazelcast runs inside the app: its own lifeline, boxed with the app's classes
+            "HZ_EMBEDDED" -> HAZELCAST_EMBEDDED
             "WS_OUT" -> USER
             "METHOD" -> "cls:" + fields(s)["method"].orEmpty().substringBefore('.')
             // a service's start or stop, drawn on the class that owns it
@@ -122,7 +123,7 @@ internal class Sequence(val trace: Trace, isApp: (String) -> Boolean) {
         }
         activations.forEach { keys += it.on }
         val classApp = HashMap<String, String>()
-        for (s in steps.values) if (s.event == "METHOD" || s.event == "LIFECYCLE") classApp[owner(s)] = s.app.orEmpty()
+        for (s in steps.values) if (s.event == "METHOD" || s.event == "LIFECYCLE" || s.event == "HZ_EMBEDDED") classApp[owner(s)] = s.app.orEmpty()
         val members = LinkedHashMap<String, MutableList<String>>()
         for (k in keys) {
             val group = when {
@@ -155,7 +156,8 @@ internal class Sequence(val trace: Trace, isApp: (String) -> Boolean) {
         val f = r.line.fields
         return when (r.step.event) {
             "HTTP_IN" -> f["route"] ?: "HTTP"
-            "HTTP_OUT", "LDAP_OUT", "MAIL_OUT", "DB_OUT" -> f["op"] ?: "call"
+            "HTTP_OUT", "LDAP_OUT", "MAIL_OUT" -> f["op"] ?: "call"
+            "DB_OUT" -> listOfNotNull(f["target"], f["op"]).joinToString(".").ifEmpty { "call" }
             // a STOMP frame: its command, and its destination when it has one
             "WS_IN", "WS_OUT" -> listOfNotNull(f["command"], f["destination"]).joinToString(" ").ifEmpty { "frame" }
             "MQ_OUT", "MQ_IN" -> f["queue"] ?: "queue"
@@ -242,6 +244,8 @@ internal class Sequence(val trace: Trace, isApp: (String) -> Boolean) {
         const val MAIL = "ext:mail"
         const val DATABASE = "ext:database"
         const val HAZELCAST = "ext:hazelcast"
+        // shortcut: one key for every app, so two apps with an embedded Hazelcast in one trace share it
+        const val HAZELCAST_EMBEDDED = "cls:hazelcast"
         private val EXT_LABEL = mapOf(USER to "User", SCHEDULER to "Scheduler", QUEUE to "Queue")
     }
 }

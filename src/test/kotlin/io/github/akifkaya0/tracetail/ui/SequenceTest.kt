@@ -139,7 +139,7 @@ class SequenceTest {
             step(25, "w2", "LDAP_OUT", "END", "w1", end("SUCCESS")),
             step(30, "w3", "MAIL_OUT", "START", "w1", ""","op":"send""""),
             step(35, "w3", "MAIL_OUT", "END", "w1", end("ERROR")),
-            step(36, "w6", "DB_OUT", "START", "w1", ""","op":"SELECT""""),
+            step(36, "w6", "DB_OUT", "START", "w1", ""","target":"OrderRepository","op":"findById""""),
             step(37, "w6", "DB_OUT", "END", "w1", end("SUCCESS")),
             step(40, "w4", "WS_OUT", "START", "w1", ""","command":"MESSAGE","destination":"/user/queue/history""""),
             step(45, "w4", "WS_OUT", "END", "w1", end("SUCCESS")),
@@ -165,7 +165,7 @@ class SequenceTest {
                 activate P3
                 P3-->>P1: ERROR · 5 ms
                 deactivate P3
-                P1->>P4: SELECT
+                P1->>P4: OrderRepository.findById
                 activate P4
                 P4-->>P1: SUCCESS · 5 ms
                 deactivate P4
@@ -217,6 +217,48 @@ class SequenceTest {
                 deactivate P1
             """.trimIndent(),
             mermaid("lc", lines),
+        )
+    }
+
+    @Test
+    fun drawsAnEmbeddedHazelcastInsideTheAppAndARemoteOneOutside() {
+        fun step(ms: Int, span: String, event: String, phase: String, parent: String?, end: String = "") = line(
+            """{"@timestamp":"2026-10-07T10:00:00.0${ms}Z","service.name":"mw","trace.id":"hz","span.id":"$span",""" +
+                (parent?.let { """"parent.id":"$it",""" } ?: "") +
+                """"event.action":"$event","phase":"$phase","map":"rates","op":"get"$end}""",
+        )
+        val end = ""","outcome":"SUCCESS","durationMs":"5""""
+        val lines = listOf(
+            step(10, "h1", "HTTP_IN", "START", null),
+            step(20, "h2", "HZ_EMBEDDED", "START", "h1"),
+            step(30, "h2", "HZ_EMBEDDED", "END", "h1", end),
+            step(40, "h3", "HZ_OUT", "START", "h1"),
+            step(50, "h3", "HZ_OUT", "END", "h1", end),
+            step(60, "h1", "HTTP_IN", "END", null, end),
+        )
+        assertEquals(
+            """
+            sequenceDiagram
+                actor P0 as User
+                box rgb(244,247,250) mw
+                participant P1 as mw
+                participant P2 as hazelcast
+                end
+                participant P3 as hazelcast
+                P0->>P1: HTTP
+                activate P1
+                P1->>P2: rates get
+                activate P2
+                P2-->>P1: SUCCESS · 5 ms
+                deactivate P2
+                P1->>P3: rates get
+                activate P3
+                P3-->>P1: SUCCESS · 5 ms
+                deactivate P3
+                P1-->>P0: SUCCESS · 5 ms
+                deactivate P1
+            """.trimIndent(),
+            mermaid("hz", lines),
         )
     }
 
