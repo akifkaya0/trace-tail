@@ -45,6 +45,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p><b>1.5.3</b></p>
+        <ul>
+            <li>The Sequence diagram draws a <code>LIFECYCLE</code> step on a lifeline for its target class,
+                kept next to its app, and labels it with its operation</li>
+        </ul>
         <p><b>1.5.2</b></p>
         <ul>
             <li>The selected line's JSON beside the steps starts closed; <b>Show Line JSON</b> in the toolbar

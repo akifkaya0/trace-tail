@@ -38,7 +38,7 @@ you can see at a glance which steps it took, which step started which, and where
 To install a build of this repository instead, run the `buildPlugin` Gradle task (Gradle tool
 window → **trace-tail → Tasks → intellij platform → buildPlugin**), then in **Settings → Plugins**
 click the gear icon, choose **Install Plugin from Disk…** and select
-`build/distributions/trace-tail-1.5.2.zip`.
+`build/distributions/trace-tail-1.5.3.zip`.
 
 See [What the application needs](#what-the-application-needs) for the logging setups the agent
 supports.
@@ -81,8 +81,8 @@ call, which makes each call 8 to 30 times slower.
 ### Sequence
 
 The **Sequence** diagram beside the Tree draws the selected request as a flow of who called whom.
-It has a lifeline for each app, for each class whose methods log `METHOD` steps (kept next to its
-app), and for the parties that write no lines: the user (who sends `HTTP_IN` and `WS_IN` and gets
+It has a lifeline for each app, for each class whose methods log `METHOD` steps or that a `LIFECYCLE` step
+starts or stops (kept next to its app), and for the parties that write no lines: the user (who sends `HTTP_IN` and `WS_IN` and gets
 `WS_OUT`), the scheduler, a queue, the LDAP system of `LDAP_OUT`, the mail system of `MAIL_OUT`, the
 database of `DB_OUT`, the Hazelcast server of `HZ_OUT` and the outside systems an `HTTP_OUT` calls. An `HZ_EMBEDDED` call goes to
 a Hazelcast inside the app, so it stays on the app's own lifeline. Each call, return and note is a row in the order the lines were

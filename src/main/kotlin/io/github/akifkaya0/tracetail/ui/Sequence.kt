@@ -48,6 +48,8 @@ internal class Sequence(val trace: Trace, isApp: (String) -> Boolean) {
             "HZ_OUT" -> HAZELCAST
             "WS_OUT" -> USER
             "METHOD" -> "cls:" + fields(s)["method"].orEmpty().substringBefore('.')
+            // a service's start or stop, drawn on the class that owns it
+            "LIFECYCLE" -> "cls:" + fields(s)["target"].orEmpty()
             else -> "app:" + s.app
         }
 
@@ -120,7 +122,7 @@ internal class Sequence(val trace: Trace, isApp: (String) -> Boolean) {
         }
         activations.forEach { keys += it.on }
         val classApp = HashMap<String, String>()
-        for (s in steps.values) if (s.event == "METHOD") classApp[owner(s)] = s.app.orEmpty()
+        for (s in steps.values) if (s.event == "METHOD" || s.event == "LIFECYCLE") classApp[owner(s)] = s.app.orEmpty()
         val members = LinkedHashMap<String, MutableList<String>>()
         for (k in keys) {
             val group = when {
@@ -159,6 +161,7 @@ internal class Sequence(val trace: Trace, isApp: (String) -> Boolean) {
             "MQ_OUT", "MQ_IN" -> f["queue"] ?: "queue"
             "HZ_OUT", "HZ_EMBEDDED" -> listOfNotNull(f["map"], f["op"]).joinToString(" ").ifEmpty { "call" }
             "JOB" -> f["job"] ?: "job"
+            "LIFECYCLE" -> f["op"] ?: "lifecycle"
             "METHOD" -> f["method"].orEmpty().substringAfter('.') + "()"
             else -> r.line.event ?: "…"
         }

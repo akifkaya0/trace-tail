@@ -184,6 +184,42 @@ class SequenceTest {
         )
     }
 
+    @Test
+    fun drawsALifecycleStepOnItsTarget() {
+        // the shutdown stops each service inside it, every one on its own class next to the app
+        fun step(ms: Int, span: String, phase: String, parent: String?, target: String, end: String = "") = line(
+            """{"@timestamp":"2026-10-07T10:00:00.0${ms}Z","service.name":"mw","trace.id":"lc","span.id":"$span",""" +
+                (parent?.let { """"parent.id":"$it",""" } ?: "") +
+                """"event.action":"LIFECYCLE","phase":"$phase","target":"$target","op":"STOP"$end}""",
+        )
+        val end = ""","outcome":"SUCCESS","durationMs":"5""""
+        val lines = listOf(
+            step(10, "l1", "START", null, "Application"),
+            step(20, "l2", "START", "l1", "RateService"),
+            step(30, "l2", "END", "l1", "RateService", end),
+            step(40, "l1", "END", null, "Application", end),
+        )
+        assertEquals(
+            """
+            sequenceDiagram
+                box rgb(244,247,250) mw
+                participant P0 as mw
+                participant P1 as Application
+                participant P2 as RateService
+                end
+                P0->>P1: STOP
+                activate P1
+                P1->>P2: STOP
+                activate P2
+                P2-->>P1: SUCCESS · 5 ms
+                deactivate P2
+                P1-->>P0: SUCCESS · 5 ms
+                deactivate P1
+            """.trimIndent(),
+            mermaid("lc", lines),
+        )
+    }
+
     /** The request's diagram as the Sequence tab draws it a second after the request started. */
     private fun mermaid(name: String, lines: List<LogLine> = lines(name)): String {
         val model = TraceModel()

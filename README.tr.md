@@ -43,7 +43,7 @@ nerede hata verdiğini tek bakışta görebilirsiniz.
 Bu deponun bir derlemesini kurmak için ise `buildPlugin` Gradle görevini çalıştırın (Gradle araç
 penceresi → **trace-tail → Tasks → intellij platform → buildPlugin**), ardından **Settings →
 Plugins** içinde dişli simgesine tıklayın, **Install Plugin from Disk…** seçeneğini seçin ve
-`build/distributions/trace-tail-1.5.2.zip` dosyasını gösterin.
+`build/distributions/trace-tail-1.5.3.zip` dosyasını gösterin.
 
 Agent'ın desteklediği log kurulumları için
 [Uygulamanın ihtiyaç duyduğu](#uygulamanın-ihtiyaç-duyduğu) bölümüne bakın.
@@ -88,8 +88,8 @@ gerektirir ve her çağrıyı 8 ila 30 kat yavaşlatır.
 ### Sequence
 
 Tree'nin yanındaki **Sequence** diyagramı seçili isteği, kimin kimi çağırdığını gösteren bir akış
-olarak çizer. Her uygulama için, metotları `METHOD` adımları loglayan her sınıf için (kendi
-uygulamasının yanında tutulur) ve satır yazmayan taraflar için bir yaşam çizgisi bulunur: kullanıcı
+olarak çizer. Her uygulama için, metotları `METHOD` adımları loglayan ya da bir `LIFECYCLE`
+adımının başlatıp durdurduğu her sınıf için (kendi uygulamasının yanında tutulur) ve satır yazmayan taraflar için bir yaşam çizgisi bulunur: kullanıcı
 (`HTTP_IN` ve `WS_IN`'i gönderen, `WS_OUT`'u alan), zamanlayıcı, bir kuyruk, `LDAP_OUT`'un LDAP
 sistemi, `MAIL_OUT`'un e-posta sistemi, `DB_OUT`'un veritabanı, `HZ_OUT`'un Hazelcast sunucusu ve bir `HTTP_OUT`'un çağırdığı
 dış sistemler. `HZ_EMBEDDED` çağrısı uygulamanın içindeki Hazelcast'e gider; bu yüzden uygulamanın
