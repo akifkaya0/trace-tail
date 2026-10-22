@@ -16,6 +16,8 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.DumbAwareToggleAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
+import com.intellij.openapi.ui.WindowWrapper
+import com.intellij.openapi.ui.WindowWrapperBuilder
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.ScrollPaneFactory
@@ -26,6 +28,7 @@ import io.github.akifkaya0.tracetail.TraceFeed
 import io.github.akifkaya0.tracetail.model.Change
 import io.github.akifkaya0.tracetail.model.LogLine
 import io.github.akifkaya0.tracetail.model.Trace
+import io.github.akifkaya0.tracetail.model.TraceModel
 import java.awt.datatransfer.StringSelection
 import java.awt.event.HierarchyEvent
 import javax.swing.JComponent
@@ -44,8 +47,7 @@ class TraceView(
 ) : Disposable {
 
     private val details: ConsoleView = TextConsoleBuilderFactory.getInstance().createBuilder(project).apply { setViewer(true) }.console
-    private val sequences = ArrayList<SequencePanel>()
-    private val sequenceBox = JPanel(VerticalLayout(JBUI.scale(24)))
+    private val sequences = Sequences(feed.model)
 
     /** The ids of the requests selected in the list, which Steps shows. */
     private var selected: Set<String> = emptySet()
@@ -62,7 +64,7 @@ class TraceView(
                 // closed until Show Line JSON opens it; the splitter gives the steps the whole width meanwhile
                 secondComponent = details.component.apply { isVisible = false }
             })
-            addTab("Sequence", sequenceTab())
+            addTab("Sequence", sequenceTab(project))
         }
     }
 
@@ -81,7 +83,7 @@ class TraceView(
 
     init {
         Disposer.register(this, details)
-        showSequences(emptyList())
+        sequences.show(emptyList())
         softWraps(feed.softWraps)
         component.addHierarchyListener { e ->
             if (e.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() != 0L && component.isShowing && stale) {
@@ -102,7 +104,7 @@ class TraceView(
                 requests.refreshRunning()
                 steps.refreshRunning()
                 // the running steps' times keep growing
-                if (sequences.any { it.running }) showSequences(shownIds())
+                if (sequences.running) sequences.show(sequences.ids)
             }
         })
     }
@@ -112,8 +114,8 @@ class TraceView(
     private fun apply(change: Change) {
         requests.apply(change)
         steps.apply(change)
-        val shown = shownIds()
-        if (shown.isNotEmpty() && (change.reset || change.changed.any { it.id in shown })) showSequences(shown)
+        val shown = sequences.ids
+        if (shown.isNotEmpty() && (change.reset || change.changed.any { it.id in shown })) sequences.show(shown)
     }
 
     private fun softWraps(on: Boolean) {
@@ -122,20 +124,28 @@ class TraceView(
         details.setSoftWraps(on)
     }
 
-    private fun sequenceTab(): JComponent {
+    private fun sequenceTab(project: Project): JComponent {
         val copy = object : DumbAwareAction("Copy as Mermaid", "Copy the diagram as Mermaid text", AllIcons.Actions.Copy) {
             override fun getActionUpdateThread() = ActionUpdateThread.EDT
             override fun update(e: AnActionEvent) {
-                e.presentation.isEnabled = shownIds().isNotEmpty()
+                e.presentation.isEnabled = sequences.ids.isNotEmpty()
             }
 
             override fun actionPerformed(e: AnActionEvent) {
-                val text = sequences.mapNotNull { it.mermaid }.joinToString("\n\n")
+                val text = sequences.mermaid
                 if (text.isNotEmpty()) CopyPasteManager.getInstance().setContents(StringSelection(text))
             }
         }
-        val scroll = ScrollPaneFactory.createScrollPane(sequenceBox, true)
-        val toolbar = ActionManager.getInstance().createActionToolbar("TraceTailSequence", DefaultActionGroup(copy), true)
+        val open = object : DumbAwareAction("Open in Window", "Show the diagram in a window of its own", AllIcons.Actions.MoveToWindow) {
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabled = sequences.ids.isNotEmpty()
+            }
+
+            override fun actionPerformed(e: AnActionEvent) = openWindow(project, sequences.ids)
+        }
+        val scroll = ScrollPaneFactory.createScrollPane(sequences.component, true)
+        val toolbar = ActionManager.getInstance().createActionToolbar("TraceTailSequence", DefaultActionGroup(copy, open), true)
         toolbar.targetComponent = scroll
         return SimpleToolWindowPanel(true, true).apply {
             this.toolbar = toolbar.component
@@ -172,7 +182,7 @@ class TraceView(
         steps.show(selected.mapNotNull { feed.model.traces[it] })
         selectLines(steps.selectedLines())
         val ids = selected.toList()
-        if (ids != shownIds()) showSequences(ids)
+        if (ids != sequences.ids) sequences.show(ids)
     }
 
     /** Beside the steps, the JSON of the lines selected in Steps, or with none, of the rows selected in the requests. */
@@ -185,20 +195,52 @@ class TraceView(
         }
     }
 
-    private fun shownIds(): List<String> = sequences.mapNotNull { it.trace?.id }
+    /** Draws the requests in a window of their own, which keeps redrawing them as they go on until it is closed. */
+    private fun openWindow(project: Project, ids: List<String>) {
+        val shown = Sequences(feed.model)
+        val window = WindowWrapperBuilder(WindowWrapper.Mode.FRAME, ScrollPaneFactory.createScrollPane(shown.component, true))
+            .setProject(project)
+            .setTitle("Sequence: " + ids.joinToString())
+            .setDimensionServiceKey("tracetail.sequenceWindow")
+            .build()
+        var ticks = 0
+        // closing the window disposes it, which unsubscribes; the snapshot that subscribing sends draws the requests
+        feed.subscribe(window, object : TraceFeed.Listener {
+            override fun changed(change: Change) {
+                if (change.reset || change.changed.any { it.id in ids }) shown.show(ids)
+            }
 
-    /** Draws the requests one under the other; with none, the diagram asks for a request to be selected. */
-    private fun showSequences(ids: List<String>) {
-        val traces: List<Trace?> = ids.mapNotNull { feed.model.traces[it] }.ifEmpty { listOf(null) }
-        while (sequences.size < traces.size) sequences += SequencePanel(feed.model).also { sequenceBox.add(it) }
-        while (sequences.size > traces.size) sequenceBox.remove(sequences.removeAt(sequences.lastIndex))
-        sequences.zip(traces).forEach { (panel, trace) -> panel.show(trace) }
-        sequenceBox.revalidate()
-        sequenceBox.repaint()
+            override fun ticked() {
+                if (++ticks % REFRESH_EVERY_TICKS == 0 && shown.running) shown.show(ids)
+            }
+        })
+        window.show()
     }
 
     private companion object {
         /** Running steps are redrawn every half second. */
         const val REFRESH_EVERY_TICKS = 500 / TraceFeed.TICK_MILLIS
+    }
+}
+
+/** Requests' diagrams one under the other; with none, the diagram asks for a request to be selected. */
+private class Sequences(private val model: TraceModel) {
+    private val panels = ArrayList<SequencePanel>()
+    val component = JPanel(VerticalLayout(JBUI.scale(24)))
+
+    /** The requests shown. */
+    val ids: List<String> get() = panels.mapNotNull { it.trace?.id }
+
+    val running: Boolean get() = panels.any { it.running }
+
+    val mermaid: String get() = panels.mapNotNull { it.mermaid }.joinToString("\n\n")
+
+    fun show(ids: List<String>) {
+        val traces: List<Trace?> = ids.mapNotNull { model.traces[it] }.ifEmpty { listOf(null) }
+        while (panels.size < traces.size) panels += SequencePanel(model).also { component.add(it) }
+        while (panels.size > traces.size) component.remove(panels.removeAt(panels.lastIndex))
+        panels.zip(traces).forEach { (panel, trace) -> panel.show(trace) }
+        component.revalidate()
+        component.repaint()
     }
 }
